@@ -2,6 +2,7 @@ require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
 
 // Инициализация бота
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -54,6 +55,57 @@ function getImagePath(imageName) {
   
   return null; // Изображение не найдено
 }
+
+// HTTP сервер для health check
+const server = http.createServer((req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200);
+    res.end();
+    return;
+  }
+
+  if (req.url === '/health' || req.url === '/') {
+    const healthData = {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      bot: {
+        name: 'Archetype Test Bot',
+        version: '1.0.0',
+        uptime: process.uptime(),
+        users: userStates.size,
+        questions: questions.length,
+        archetypes: Object.keys(archetypesData).length
+      },
+      system: {
+        memory: process.memoryUsage(),
+        platform: process.platform,
+        nodeVersion: process.version
+      }
+    };
+
+    res.writeHead(200);
+    res.end(JSON.stringify(healthData, null, 2));
+  } else if (req.url === '/status') {
+    const statusData = {
+      status: 'running',
+      uptime: process.uptime(),
+      activeUsers: userStates.size,
+      totalQuestions: questions.length,
+      archetypes: Object.keys(archetypesData)
+    };
+
+    res.writeHead(200);
+    res.end(JSON.stringify(statusData, null, 2));
+  } else {
+    res.writeHead(404);
+    res.end(JSON.stringify({ error: 'Not Found' }));
+  }
+});
 
 // Обработка команды /start
 bot.command('start', (ctx) => {
@@ -226,6 +278,14 @@ bot.use(async (ctx, next) => {
   console.log('Response time: %sms', ms);
 });
 
+// Запуск HTTP сервера
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`🌐 HTTP сервер запущен на порту ${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`📈 Status: http://localhost:${PORT}/status`);
+});
+
 // Запуск бота
 bot.launch()
   .then(() => {
@@ -248,8 +308,21 @@ bot.launch()
   });
 
 // Graceful stop
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+process.once('SIGINT', () => {
+  bot.stop('SIGINT');
+  server.close(() => {
+    console.log('HTTP сервер остановлен');
+    process.exit(0);
+  });
+});
+
+process.once('SIGTERM', () => {
+  bot.stop('SIGTERM');
+  server.close(() => {
+    console.log('HTTP сервер остановлен');
+    process.exit(0);
+  });
+});
 
 // Обработка неизвестных callback queries (должен быть последним)
 bot.action(/.*/, async (ctx) => {
