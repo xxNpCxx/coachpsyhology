@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const fs = require('fs');
+const path = require('path');
 
 // Инициализация бота
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -40,6 +41,20 @@ function initializeArchetypeScores() {
   return scores;
 }
 
+// Проверка существования изображения
+function getImagePath(imageName) {
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+  
+  for (const ext of imageExtensions) {
+    const imagePath = path.join(__dirname, 'questions', imageName + ext);
+    if (fs.existsSync(imagePath)) {
+      return imagePath;
+    }
+  }
+  
+  return null; // Изображение не найдено
+}
+
 // Обработка команды /start
 bot.command('start', (ctx) => {
   const userId = ctx.from.id;
@@ -54,7 +69,7 @@ bot.command('start', (ctx) => {
 });
 
 // Отправка вопроса пользователю
-function sendQuestion(ctx, userId) {
+async function sendQuestion(ctx, userId) {
   const userState = userStates.get(userId);
   
   if (userState.currentQuestionIndex >= questions.length) {
@@ -67,7 +82,8 @@ function sendQuestion(ctx, userId) {
   const questionNumber = userState.currentQuestionIndex + 1;
   const totalQuestions = questions.length;
   
-  const message = `Вопрос ${questionNumber} из ${totalQuestions}:\n\n${question.text}`;
+  // Ищем изображение по названию вопроса
+  const imagePath = getImagePath(question.text);
   
   const keyboard = {
     inline_keyboard: [
@@ -80,11 +96,32 @@ function sendQuestion(ctx, userId) {
     ]
   };
   
-  ctx.reply(message, { reply_markup: keyboard });
+  try {
+    if (imagePath) {
+      // Отправляем изображение с подписью и кнопками
+      const caption = `Вопрос ${questionNumber} из ${totalQuestions}`;
+      await ctx.replyWithPhoto(
+        { source: imagePath },
+        { 
+          caption: caption,
+          reply_markup: keyboard 
+        }
+      );
+    } else {
+      // Если изображение не найдено, отправляем текстовое сообщение
+      const message = `Вопрос ${questionNumber} из ${totalQuestions}:\n\nИзображение "${question.text}" не найдено в папке questions/`;
+      await ctx.reply(message, { reply_markup: keyboard });
+    }
+  } catch (error) {
+    console.error('Ошибка отправки изображения:', error);
+    // Fallback на текстовое сообщение
+    const message = `Вопрос ${questionNumber} из ${totalQuestions}:\n\n${question.text}`;
+    await ctx.reply(message, { reply_markup: keyboard });
+  }
 }
 
 // Обработка ответов пользователя
-bot.action(/answer_(\d)/, (ctx) => {
+bot.action(/answer_(\d)/, async (ctx) => {
   const userId = ctx.from.id;
   const answer = parseInt(ctx.match[1]);
   
@@ -114,7 +151,11 @@ bot.action(/answer_(\d)/, (ctx) => {
   ctx.answerCbQuery();
   
   // Удаляем предыдущее сообщение с кнопками
-  ctx.deleteMessage();
+  try {
+    await ctx.deleteMessage();
+  } catch (error) {
+    console.log('Не удалось удалить сообщение:', error.message);
+  }
   
   // Отправляем следующий вопрос
   sendQuestion(ctx, userId);
@@ -158,9 +199,18 @@ bot.catch((err, ctx) => {
 bot.launch()
   .then(() => {
     console.log('🤖 Бот запущен!');
-    console.log('📝 Добавьте вопросы в файл questions.json');
+    console.log('📝 Добавьте изображения в папку questions/');
     console.log('🔑 Установите BOT_TOKEN в .env файле');
     console.log(`📊 Загружено ${Object.keys(archetypesData).length} архетипов с ${questions.length} вопросами`);
+    
+    // Проверяем наличие изображений
+    const questionsFolder = path.join(__dirname, 'questions');
+    if (fs.existsSync(questionsFolder)) {
+      const files = fs.readdirSync(questionsFolder);
+      console.log(`🖼️ Найдено ${files.length} файлов в папке questions/`);
+    } else {
+      console.log('⚠️ Папка questions/ не найдена');
+    }
   })
   .catch((err) => {
     console.error('Ошибка запуска бота:', err);
