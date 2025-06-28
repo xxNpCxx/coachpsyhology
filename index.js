@@ -88,10 +88,10 @@ async function sendQuestion(ctx, userId) {
   const keyboard = {
     inline_keyboard: [
       [
-        { text: '0', callback_data: 'answer_0' },
-        { text: '1', callback_data: 'answer_1' },
-        { text: '2', callback_data: 'answer_2' },
-        { text: '3', callback_data: 'answer_3' }
+        { text: 'Полностью согласен(на) ', callback_data: 'answer_0' },
+        { text: 'Скорее да, чем нет', callback_data: 'answer_1' },
+        { text: 'Не знаю', callback_data: 'answer_2' },
+        { text: 'Это совсем не про меня', callback_data: 'answer_3' }
       ]
     ]
   };
