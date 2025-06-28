@@ -131,8 +131,16 @@ bot.action(/answer_(\d)/, async (ctx) => {
   const userId = ctx.from.id;
   const answer = parseInt(ctx.match[1]);
   
+  // Сразу отвечаем на callback query, чтобы избежать ошибки
+  try {
+    await ctx.answerCbQuery();
+  } catch (error) {
+    console.log('Callback query уже обработан или устарел:', error.message);
+    return;
+  }
+  
   if (!userStates.has(userId)) {
-    ctx.answerCbQuery('Начните тест заново с команды /start');
+    ctx.reply('Начните тест заново с команды /start');
     return;
   }
   
@@ -152,9 +160,6 @@ bot.action(/answer_(\d)/, async (ctx) => {
   
   // Переходим к следующему вопросу
   userState.currentQuestionIndex++;
-  
-  // Отвечаем на callback query
-  ctx.answerCbQuery();
   
   // Удаляем предыдущее сообщение с кнопками
   try {
@@ -198,7 +203,27 @@ function showResults(ctx, userId) {
 // Обработка ошибок
 bot.catch((err, ctx) => {
   console.error(`Ошибка для ${ctx.updateType}:`, err);
-  ctx.reply('Произошла ошибка. Попробуйте еще раз или начните тест заново с /start');
+  
+  // Специальная обработка для callback query ошибок
+  if (err.description && err.description.includes('query is too old')) {
+    console.log('Игнорируем устаревший callback query');
+    return;
+  }
+  
+  // Для других ошибок отправляем сообщение пользователю
+  try {
+    ctx.reply('Произошла ошибка. Попробуйте еще раз или начните тест заново с /start');
+  } catch (replyError) {
+    console.error('Не удалось отправить сообщение об ошибке:', replyError);
+  }
+});
+
+// Middleware для логирования
+bot.use(async (ctx, next) => {
+  const start = new Date();
+  await next();
+  const ms = new Date() - start;
+  console.log('Response time: %sms', ms);
 });
 
 // Запуск бота
@@ -224,4 +249,13 @@ bot.launch()
 
 // Graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM')); 
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
+
+// Обработка неизвестных callback queries (должен быть последним)
+bot.action(/.*/, async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Неизвестная команда');
+  } catch (error) {
+    console.log('Не удалось ответить на неизвестный callback query:', error.message);
+  }
+}); 
