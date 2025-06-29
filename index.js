@@ -10,16 +10,25 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 // Загрузка вопросов из JSON файла
 const archetypesData = JSON.parse(fs.readFileSync('./questions.json', 'utf8'));
 
-// Преобразование структуры в плоский массив вопросов
+// Преобразование структуры в плоский массив вопросов по порядку от 1 до 84
 const questions = [];
-Object.entries(archetypesData).forEach(([archetype, imagesList]) => {
-  imagesList.forEach(questionText => {
-    questions.push({
-      text: questionText,
-      archetype: archetype
-    });
-  });
-});
+const archetypeNames = Object.keys(archetypesData);
+const questionsPerArchetype = 7; // 7 вопросов на архетип
+
+// Создаем массив вопросов, перемешивая их между архетипами
+for (let questionIndex = 0; questionIndex < questionsPerArchetype; questionIndex++) {
+  for (let archetypeIndex = 0; archetypeIndex < archetypeNames.length; archetypeIndex++) {
+    const archetype = archetypeNames[archetypeIndex];
+    const imageName = archetypesData[archetype][questionIndex];
+    
+    if (imageName) {
+      questions.push({
+        text: imageName,
+        archetype: archetype
+      });
+    }
+  }
+}
 
 // Хранилище состояния пользователей в памяти
 const userStates = new Map();
@@ -129,7 +138,7 @@ const server = http.createServer(async (req, res) => {
   } else if (req.url === '/set-webhook') {
     // Endpoint для установки webhook
     try {
-      const webhookUrl = `${req.headers.host ? `https://${req.headers.host}` : 'https://your-domain.com'}/webhook`;
+      const webhookUrl = process.env.WEBHOOK_URL;
       await bot.telegram.setWebhook(webhookUrl);
       res.writeHead(200);
       res.end(JSON.stringify({ 
