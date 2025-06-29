@@ -12,8 +12,8 @@ const archetypesData = JSON.parse(fs.readFileSync('./questions.json', 'utf8'));
 
 // Преобразование структуры в плоский массив вопросов
 const questions = [];
-Object.entries(archetypesData).forEach(([archetype, questionsList]) => {
-  questionsList.forEach(questionText => {
+Object.entries(archetypesData).forEach(([archetype, imagesList]) => {
+  imagesList.forEach(questionText => {
     questions.push({
       text: questionText,
       archetype: archetype
@@ -342,7 +342,7 @@ server.listen(PORT, async () => {
   }
 });
 
-// Запуск бота (только для инициализации, не использует long polling)
+// Инициализация бота (без launch)
 console.log('🤖 Бот инициализирован для работы через webhook!');
 console.log('📝 Добавьте изображения в папку questions/');
 console.log('🔑 Установите BOT_TOKEN в .env файле');
@@ -357,9 +357,9 @@ if (fs.existsSync(questionsFolder)) {
   console.log('⚠️ Папка questions/ не найдена');
 }
 
-// Graceful stop
+// Graceful stop (только для HTTP сервера, не для бота)
 process.once('SIGINT', () => {
-  bot.stop('SIGINT');
+  console.log('Получен сигнал SIGINT, останавливаем сервер...');
   server.close(() => {
     console.log('HTTP сервер остановлен');
     process.exit(0);
@@ -367,7 +367,7 @@ process.once('SIGINT', () => {
 });
 
 process.once('SIGTERM', () => {
-  bot.stop('SIGTERM');
+  console.log('Получен сигнал SIGTERM, останавливаем сервер...');
   server.close(() => {
     console.log('HTTP сервер остановлен');
     process.exit(0);
