@@ -11,24 +11,25 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 const archetypesData = JSON.parse(fs.readFileSync('./questions.json', 'utf8'));
 
 // Преобразование структуры в плоский массив вопросов по порядку от 1 до 84
-const questions = [];
+// Сначала собираем все вопросы в массив
+const allQuestions = [];
 const archetypeNames = Object.keys(archetypesData);
-const questionsPerArchetype = 7; // 7 вопросов на архетип
 
-// Создаем массив вопросов, перемешивая их между архетипами
-for (let questionIndex = 0; questionIndex < questionsPerArchetype; questionIndex++) {
-  for (let archetypeIndex = 0; archetypeIndex < archetypeNames.length; archetypeIndex++) {
-    const archetype = archetypeNames[archetypeIndex];
-    const imageName = archetypesData[archetype][questionIndex];
-    
-    if (imageName) {
-      questions.push({
-        text: imageName,
-        archetype: archetype
-      });
-    }
+for (const archetype of archetypeNames) {
+  for (const imageName of archetypesData[archetype]) {
+    allQuestions.push({
+      text: imageName,
+      archetype: archetype
+    });
   }
 }
+
+// Сортируем по числовому значению в text
+const questions = allQuestions.sort((a, b) => {
+  const numA = parseInt(a.text);
+  const numB = parseInt(b.text);
+  return numA - numB;
+});
 
 // Хранилище состояния пользователей в памяти
 const userStates = new Map();
@@ -54,14 +55,14 @@ function initializeArchetypeScores() {
 // Проверка существования изображения
 function getImagePath(imageName) {
   const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-  
+
   for (const ext of imageExtensions) {
     const imagePath = path.join(__dirname, 'questions', imageName + ext);
     if (fs.existsSync(imagePath)) {
       return imagePath;
     }
   }
-  
+
   return null; // Изображение не найдено
 }
 
@@ -84,7 +85,7 @@ const server = http.createServer(async (req, res) => {
     req.on('data', chunk => {
       body += chunk.toString();
     });
-    
+
     req.on('end', async () => {
       try {
         const update = JSON.parse(body);
@@ -141,17 +142,17 @@ const server = http.createServer(async (req, res) => {
       const webhookUrl = process.env.WEBHOOK_URL;
       await bot.telegram.setWebhook(webhookUrl);
       res.writeHead(200);
-      res.end(JSON.stringify({ 
-        success: true, 
+      res.end(JSON.stringify({
+        success: true,
         webhookUrl: webhookUrl,
-        message: 'Webhook установлен успешно' 
+        message: 'Webhook установлен успешно'
       }));
     } catch (error) {
       console.error('Ошибка установки webhook:', error);
       res.writeHead(500);
-      res.end(JSON.stringify({ 
-        success: false, 
-        error: error.message 
+      res.end(JSON.stringify({
+        success: false,
+        error: error.message
       }));
     }
   } else {
@@ -163,12 +164,12 @@ const server = http.createServer(async (req, res) => {
 // Обработка команды /start
 bot.command('start', (ctx) => {
   const userId = ctx.from.id;
-  
+
   // Инициализация состояния пользователя
   userStates.set(userId, new UserState());
   const userState = userStates.get(userId);
   userState.archetypeScores = initializeArchetypeScores();
-  
+
   // Отправка первого вопроса
   sendQuestion(ctx, userId);
 });
@@ -176,20 +177,20 @@ bot.command('start', (ctx) => {
 // Отправка вопроса пользователю
 async function sendQuestion(ctx, userId) {
   const userState = userStates.get(userId);
-  
+
   if (userState.currentQuestionIndex >= questions.length) {
     // Тест завершен, показываем результаты
     showResults(ctx, userId);
     return;
   }
-  
+
   const question = questions[userState.currentQuestionIndex];
   const questionNumber = userState.currentQuestionIndex + 1;
   const totalQuestions = questions.length;
-  
+
   // Ищем изображение по названию вопроса
   const imagePath = getImagePath(question.text);
-  
+
   const keyboard = {
     inline_keyboard: [
       [
@@ -206,16 +207,16 @@ async function sendQuestion(ctx, userId) {
       ]
     ]
   };
-  
+
   try {
     if (imagePath) {
       // Отправляем изображение с подписью и кнопками
       const caption = `Вопрос ${questionNumber} из ${totalQuestions}`;
       await ctx.replyWithPhoto(
         { source: imagePath },
-        { 
+        {
           caption: caption,
-          reply_markup: keyboard 
+          reply_markup: keyboard
         }
       );
     } else {
@@ -235,7 +236,7 @@ async function sendQuestion(ctx, userId) {
 bot.action(/answer_(\d)/, async (ctx) => {
   const userId = ctx.from.id;
   const answer = parseInt(ctx.match[1]);
-  
+
   // Сразу отвечаем на callback query, чтобы избежать ошибки
   try {
     await ctx.answerCbQuery();
@@ -243,36 +244,36 @@ bot.action(/answer_(\d)/, async (ctx) => {
     console.log('Callback query уже обработан или устарел:', error.message);
     return;
   }
-  
+
   if (!userStates.has(userId)) {
     ctx.reply('Начните тест заново с команды /start');
     return;
   }
-  
+
   const userState = userStates.get(userId);
   const currentQuestion = questions[userState.currentQuestionIndex];
-  
+
   // Сохраняем ответ
   userState.answers.push({
     questionIndex: userState.currentQuestionIndex,
     answer: answer,
     archetype: currentQuestion.archetype
   });
-  
+
   // Добавляем баллы к архетипу
   const currentScore = userState.archetypeScores.get(currentQuestion.archetype) || 0;
   userState.archetypeScores.set(currentQuestion.archetype, currentScore + answer);
-  
+
   // Переходим к следующему вопросу
   userState.currentQuestionIndex++;
-  
+
   // Удаляем предыдущее сообщение с кнопками
   try {
     await ctx.deleteMessage();
   } catch (error) {
     console.log('Не удалось удалить сообщение:', error.message);
   }
-  
+
   // Отправляем следующий вопрос
   sendQuestion(ctx, userId);
 });
@@ -280,27 +281,27 @@ bot.action(/answer_(\d)/, async (ctx) => {
 // Показ результатов теста
 function showResults(ctx, userId) {
   const userState = userStates.get(userId);
-  
+
   // Сортируем архетипы по баллам (по убыванию)
   const sortedArchetypes = Array.from(userState.archetypeScores.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4); // Берем топ-4
-  
+
   let resultMessage = '🎯 Результаты вашего теста архетипов:\n\n';
   resultMessage += 'Ваши 4 наиболее выраженных архетипа:\n\n';
-  
+
   sortedArchetypes.forEach((archetype, index) => {
     const [name, score] = archetype;
     const maxPossibleScore = archetypesData[name].length * 3;
     const percentage = Math.round((score / maxPossibleScore) * 100);
-    
+
     resultMessage += `${index + 1}. ${name}: ${score} баллов (${percentage}%)\n`;
   });
-  
+
   resultMessage += '\nДля прохождения теста заново используйте /start';
-  
+
   ctx.reply(resultMessage);
-  
+
   // Очищаем состояние пользователя
   userStates.delete(userId);
 }
@@ -308,13 +309,13 @@ function showResults(ctx, userId) {
 // Обработка ошибок
 bot.catch((err, ctx) => {
   console.error(`Ошибка для ${ctx.updateType}:`, err);
-  
+
   // Специальная обработка для callback query ошибок
   if (err.description && err.description.includes('query is too old')) {
     console.log('Игнорируем устаревший callback query');
     return;
   }
-  
+
   // Для других ошибок отправляем сообщение пользователю
   try {
     ctx.reply('Произошла ошибка. Попробуйте еще раз или начните тест заново с /start');
@@ -339,7 +340,7 @@ server.listen(PORT, async () => {
   console.log(`📈 Status: http://localhost:${PORT}/status`);
   console.log(`🔗 Webhook: http://localhost:${PORT}/webhook`);
   console.log(`⚙️ Set webhook: http://localhost:${PORT}/set-webhook`);
-  
+
   // Автоматическая установка webhook при запуске (если есть домен)
   if (process.env.WEBHOOK_URL) {
     try {
