@@ -13,6 +13,7 @@ Telegram-бот на Node.js с использованием Telegraf.js для 
 - ✅ Хранение состояния в памяти
 - ✅ Готовность к деплою на Render
 - ✅ Health check endpoints
+- ✅ Webhook поддержка
 
 ## Установка и настройка
 
@@ -30,10 +31,11 @@ npm install
 cp env.example .env
 ```
 
-Добавьте в `.env` ваш токен бота:
+Добавьте в `.env` ваш токен бота и webhook URL:
 
 ```
 BOT_TOKEN=your_telegram_bot_token_here
+WEBHOOK_URL=https://your-app.onrender.com/webhook
 ```
 
 ### 3. Создание бота в Telegram
@@ -103,17 +105,39 @@ npm run dev
 3. Подключите ваш GitHub репозиторий
 4. Настройте переменные окружения:
    - `BOT_TOKEN`: ваш токен бота
+   - `WEBHOOK_URL`: `https://your-app-name.onrender.com/webhook`
 5. Установите команду запуска: `npm start`
 6. Настройте Health Check Path: `/health`
 7. Деплойте!
 
-### Health Check Endpoints
+### Webhook Endpoints
 
 После деплоя бот предоставляет следующие endpoints:
 
+- **`/webhook`** - Основной webhook endpoint для Telegram (POST)
+- **`/set-webhook`** - Автоматическая установка webhook (GET)
 - **`/health`** - Подробная информация о состоянии бота
 - **`/status`** - Краткая информация о статусе
 - **`/`** - Основной health check (аналогично `/health`)
+
+### Установка Webhook
+
+После деплоя на Render:
+
+1. **Автоматически** - если установлена переменная `WEBHOOK_URL`
+2. **Вручную** - перейдите по ссылке: `https://your-app.onrender.com/set-webhook`
+3. **Через API** - отправьте POST запрос на `/set-webhook`
+
+**Пример ответа `/set-webhook`:**
+```json
+{
+  "success": true,
+  "webhookUrl": "https://your-app.onrender.com/webhook",
+  "message": "Webhook установлен успешно"
+}
+```
+
+### Health Check Endpoints
 
 **Пример ответа `/health`:**
 ```json
@@ -126,7 +150,8 @@ npm run dev
     "uptime": 3600,
     "users": 5,
     "questions": 84,
-    "archetypes": 12
+    "archetypes": 12,
+    "webhook": true
   },
   "system": {
     "memory": {...},
@@ -158,12 +183,13 @@ npm run dev
 
 - **Фреймворк:** Telegraf.js
 - **Хранение данных:** Map в оперативной памяти
-- **Деплой:** Готов к Render без webhook
+- **Деплой:** Готов к Render с webhook
 - **Обработка ошибок:** Graceful shutdown
 - **Модульность:** Чистый, понятный код
 - **Изображения:** Поддержка JPG, PNG, GIF, WebP
 - **Fallback:** Текстовые сообщения при отсутствии изображений
 - **Health Check:** HTTP endpoints для мониторинга
+- **Webhook:** Полная поддержка webhook для production
 
 ## Поддержка
 
@@ -174,3 +200,4 @@ npm run dev
 4. Убедитесь, что все 12 архетипов имеют по 7 изображений
 5. Проверьте логи в консоли
 6. Проверьте health check endpoints
+7. Убедитесь, что webhook установлен корректно

@@ -56,8 +56,8 @@ function getImagePath(imageName) {
   return null; // Изображение не найдено
 }
 
-// HTTP сервер для health check
-const server = http.createServer((req, res) => {
+// HTTP сервер для webhook и health check
+const server = http.createServer(async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -69,6 +69,29 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Webhook endpoint для Telegram
+  if (req.url === '/webhook' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    
+    req.on('end', async () => {
+      try {
+        const update = JSON.parse(body);
+        await bot.handleUpdate(update);
+        res.writeHead(200);
+        res.end('OK');
+      } catch (error) {
+        console.error('Ошибка обработки webhook:', error);
+        res.writeHead(500);
+        res.end('Error');
+      }
+    });
+    return;
+  }
+
+  // Health check endpoints
   if (req.url === '/health' || req.url === '/') {
     const healthData = {
       status: 'ok',
@@ -79,7 +102,8 @@ const server = http.createServer((req, res) => {
         uptime: process.uptime(),
         users: userStates.size,
         questions: questions.length,
-        archetypes: Object.keys(archetypesData).length
+        archetypes: Object.keys(archetypesData).length,
+        webhook: true
       },
       system: {
         memory: process.memoryUsage(),
@@ -96,11 +120,31 @@ const server = http.createServer((req, res) => {
       uptime: process.uptime(),
       activeUsers: userStates.size,
       totalQuestions: questions.length,
-      archetypes: Object.keys(archetypesData)
+      archetypes: Object.keys(archetypesData),
+      webhook: true
     };
 
     res.writeHead(200);
     res.end(JSON.stringify(statusData, null, 2));
+  } else if (req.url === '/set-webhook') {
+    // Endpoint для установки webhook
+    try {
+      const webhookUrl = `${req.headers.host ? `https://${req.headers.host}` : 'https://your-domain.com'}/webhook`;
+      await bot.telegram.setWebhook(webhookUrl);
+      res.writeHead(200);
+      res.end(JSON.stringify({ 
+        success: true, 
+        webhookUrl: webhookUrl,
+        message: 'Webhook установлен успешно' 
+      }));
+    } catch (error) {
+      console.error('Ошибка установки webhook:', error);
+      res.writeHead(500);
+      res.end(JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }));
+    }
   } else {
     res.writeHead(404);
     res.end(JSON.stringify({ error: 'Not Found' }));
@@ -280,32 +324,38 @@ bot.use(async (ctx, next) => {
 
 // Запуск HTTP сервера
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🌐 HTTP сервер запущен на порту ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`📈 Status: http://localhost:${PORT}/status`);
+  console.log(`🔗 Webhook: http://localhost:${PORT}/webhook`);
+  console.log(`⚙️ Set webhook: http://localhost:${PORT}/set-webhook`);
+  
+  // Автоматическая установка webhook при запуске (если есть домен)
+  if (process.env.WEBHOOK_URL) {
+    try {
+      await bot.telegram.setWebhook(process.env.WEBHOOK_URL);
+      console.log(`✅ Webhook установлен: ${process.env.WEBHOOK_URL}`);
+    } catch (error) {
+      console.log('⚠️ Не удалось установить webhook автоматически:', error.message);
+    }
+  }
 });
 
-// Запуск бота
-bot.launch()
-  .then(() => {
-    console.log('🤖 Бот запущен!');
-    console.log('📝 Добавьте изображения в папку questions/');
-    console.log('🔑 Установите BOT_TOKEN в .env файле');
-    console.log(`📊 Загружено ${Object.keys(archetypesData).length} архетипов с ${questions.length} вопросами`);
-    
-    // Проверяем наличие изображений
-    const questionsFolder = path.join(__dirname, 'questions');
-    if (fs.existsSync(questionsFolder)) {
-      const files = fs.readdirSync(questionsFolder);
-      console.log(`🖼️ Найдено ${files.length} файлов в папке questions/`);
-    } else {
-      console.log('⚠️ Папка questions/ не найдена');
-    }
-  })
-  .catch((err) => {
-    console.error('Ошибка запуска бота:', err);
-  });
+// Запуск бота (только для инициализации, не использует long polling)
+console.log('🤖 Бот инициализирован для работы через webhook!');
+console.log('📝 Добавьте изображения в папку questions/');
+console.log('🔑 Установите BOT_TOKEN в .env файле');
+console.log(`📊 Загружено ${Object.keys(archetypesData).length} архетипов с ${questions.length} вопросами`);
+
+// Проверяем наличие изображений
+const questionsFolder = path.join(__dirname, 'questions');
+if (fs.existsSync(questionsFolder)) {
+  const files = fs.readdirSync(questionsFolder);
+  console.log(`🖼️ Найдено ${files.length} файлов в папке questions/`);
+} else {
+  console.log('⚠️ Папка questions/ не найдена');
+}
 
 // Graceful stop
 process.once('SIGINT', () => {
