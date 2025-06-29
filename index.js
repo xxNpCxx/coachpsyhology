@@ -11,7 +11,7 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 const archetypesData = JSON.parse(fs.readFileSync('./questions.json', 'utf8'));
 
 // Преобразование структуры в плоский массив вопросов по порядку от 1 до 84
-// Сначала собираем все вопросы в массив
+// Сохраняем порядок архетипов из JSON файла
 const allQuestions = [];
 const archetypeNames = Object.keys(archetypesData);
 
@@ -24,7 +24,7 @@ for (const archetype of archetypeNames) {
   }
 }
 
-// Сортируем по числовому значению в text
+// Сортируем по числовому значению в text для правильного порядка изображений
 const questions = allQuestions.sort((a, b) => {
   const numA = parseInt(a.text);
   const numB = parseInt(b.text);
@@ -260,9 +260,14 @@ bot.action(/answer_(\d)/, async (ctx) => {
     archetype: currentQuestion.archetype
   });
 
-  // Добавляем баллы к архетипу
+  // Добавляем баллы к архетипу (исправленная логика)
+  // 0 = "Полностью согласен" = 3 балла
+  // 1 = "Скорее да, чем нет" = 2 балла  
+  // 2 = "Не знаю" = 1 балл
+  // 3 = "Это совсем не про меня" = 0 баллов
+  const scoreForAnswer = 3 - answer;
   const currentScore = userState.archetypeScores.get(currentQuestion.archetype) || 0;
-  userState.archetypeScores.set(currentQuestion.archetype, currentScore + answer);
+  userState.archetypeScores.set(currentQuestion.archetype, currentScore + scoreForAnswer);
 
   // Переходим к следующему вопросу
   userState.currentQuestionIndex++;
