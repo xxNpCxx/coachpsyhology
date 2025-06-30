@@ -66,6 +66,15 @@ function getImagePath(imageName) {
   return null; // Изображение не найдено
 }
 
+// Получение пути к PDF файлу архетипа
+function getArchetypePdfPath(archetypeName) {
+  const pdfPath = path.join(__dirname, 'answers', archetypeName.toLowerCase() + '.pdf');
+  if (fs.existsSync(pdfPath)) {
+    return pdfPath;
+  }
+  return null; // PDF файл не найден
+}
+
 // HTTP сервер для webhook и health check
 const server = http.createServer(async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
@@ -280,11 +289,11 @@ bot.action(/answer_(\d)/, async (ctx) => {
   }
 
   // Отправляем следующий вопрос
-  sendQuestion(ctx, userId);
+  await sendQuestion(ctx, userId);
 });
 
 // Показ результатов теста
-function showResults(ctx, userId) {
+async function showResults(ctx, userId) {
   const userState = userStates.get(userId);
 
   // Сортируем архетипы по баллам (по убыванию)
@@ -303,9 +312,38 @@ function showResults(ctx, userId) {
     resultMessage += `${index + 1}. ${name}: ${score} баллов (${percentage}%)\n`;
   });
 
-  resultMessage += '\nДля прохождения теста заново используйте /start';
+  resultMessage += '\n📚 Отправляю подробные описания ваших архетипов...';
 
-  ctx.reply(resultMessage);
+  // Отправляем результаты
+  await ctx.reply(resultMessage);
+
+  // Отправляем PDF файлы для топ-4 архетипов
+  for (let i = 0; i < sortedArchetypes.length; i++) {
+    const [archetypeName, score] = sortedArchetypes[i];
+    const pdfPath = getArchetypePdfPath(archetypeName);
+    
+    if (pdfPath) {
+      try {
+        const caption = `📖 ${archetypeName} - подробное описание архетипа`;
+        await ctx.replyWithDocument(
+          { source: pdfPath },
+          { caption: caption }
+        );
+        
+        // Небольшая задержка между отправками файлов
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error(`Ошибка отправки PDF для архетипа ${archetypeName}:`, error);
+        await ctx.reply(`❌ Не удалось отправить описание архетипа "${archetypeName}"`);
+      }
+    } else {
+      console.error(`PDF файл не найден для архетипа: ${archetypeName}`);
+      await ctx.reply(`⚠️ Описание архетипа "${archetypeName}" не найдено`);
+    }
+  }
+
+  // Финальное сообщение
+  await ctx.reply('✅ Все описания отправлены!\n\nДля прохождения теста заново используйте /start');
 
   // Очищаем состояние пользователя
   userStates.delete(userId);
@@ -370,6 +408,28 @@ if (fs.existsSync(questionsFolder)) {
   console.log(`🖼️ Найдено ${files.length} файлов в папке questions/`);
 } else {
   console.log('⚠️ Папка questions/ не найдена');
+}
+
+// Проверяем наличие PDF файлов архетипов
+const answersFolder = path.join(__dirname, 'answers');
+if (fs.existsSync(answersFolder)) {
+  const pdfFiles = fs.readdirSync(answersFolder).filter(file => file.endsWith('.pdf'));
+  console.log(`📚 Найдено ${pdfFiles.length} PDF файлов в папке answers/`);
+  
+  // Проверяем соответствие PDF файлов архетипам
+  const archetypeNames = Object.keys(archetypesData);
+  const missingPdfs = archetypeNames.filter(archetype => {
+    const pdfPath = path.join(answersFolder, archetype.toLowerCase() + '.pdf');
+    return !fs.existsSync(pdfPath);
+  });
+  
+  if (missingPdfs.length > 0) {
+    console.log('⚠️ Отсутствуют PDF файлы для архетипов:', missingPdfs);
+  } else {
+    console.log('✅ Все PDF файлы архетипов найдены');
+  }
+} else {
+  console.log('⚠️ Папка answers/ не найдена');
 }
 
 // Graceful stop (только для HTTP сервера, не для бота)

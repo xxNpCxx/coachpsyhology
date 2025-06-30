@@ -103,6 +103,29 @@ function runTests() {
     }
   }
   
+  // Тест 6: Проверка наличия PDF файлов архетипов
+  console.log('\nТест 6: Проверка наличия PDF файлов архетипов');
+  const answersFolder = path.join(__dirname, 'answers');
+  if (fs.existsSync(answersFolder)) {
+    const pdfFiles = fs.readdirSync(answersFolder).filter(file => file.endsWith('.pdf'));
+    console.log('Найдены PDF файлы:', pdfFiles);
+    
+    // Проверяем соответствие PDF файлов архетипам
+    const archetypeNames = Object.keys(archetypesData);
+    const missingPdfs = archetypeNames.filter(archetype => {
+      const pdfPath = path.join(answersFolder, archetype.toLowerCase() + '.pdf');
+      return !fs.existsSync(pdfPath);
+    });
+    
+    if (missingPdfs.length === 0) {
+      console.log('✅ Все PDF файлы архетипов найдены');
+    } else {
+      console.log('❌ Отсутствуют PDF файлы для архетипов:', missingPdfs);
+    }
+  } else {
+    console.log('❌ Папка answers/ не найдена');
+  }
+  
   console.log('\n🎯 Тесты завершены!');
 }
 
