@@ -177,7 +177,7 @@ bot.command('start', async (ctx) => {
   const hasState = userStates.has(userId);
   const buttonText = hasState ? '🔄 Пройти снова' : '▶️ Начать тест';
   const callbackData = hasState ? 'restart_test' : 'start_test';
-  await ctx.reply(' ', {
+  await ctx.reply('Добро пожаловать! Готовы пройти тест архетипов?', {
     reply_markup: {
       inline_keyboard: [[{ text: buttonText, callback_data: callbackData }]]
     }
