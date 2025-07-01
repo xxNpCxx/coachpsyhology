@@ -212,6 +212,11 @@ async function sendQuestion(ctx, userId) {
   const questionNumber = userState.currentQuestionIndex + 1;
   const totalQuestions = questions.length;
 
+  // Эмодзи шкала прогресса
+  const progressBarLength = 10;
+  const filled = Math.round((questionNumber) / totalQuestions * progressBarLength);
+  const progressBar = '🟩'.repeat(filled) + '⬜'.repeat(progressBarLength - filled);
+
   // Ищем изображение по названию вопроса
   const imagePath = getImagePath(question.text);
 
@@ -235,7 +240,7 @@ async function sendQuestion(ctx, userId) {
   try {
     if (imagePath) {
       // Отправляем изображение с подписью и кнопками
-      const caption = `Вопрос ${questionNumber} из ${totalQuestions}`;
+      const caption = `Вопрос ${questionNumber} из ${totalQuestions}\n${progressBar}`;
       await ctx.replyWithPhoto(
         { source: imagePath },
         {
@@ -245,13 +250,13 @@ async function sendQuestion(ctx, userId) {
       );
     } else {
       // Если изображение не найдено, отправляем текстовое сообщение
-      const message = `Вопрос ${questionNumber} из ${totalQuestions}:\n\nИзображение "${question.text}" не найдено в папке questions/`;
+      const message = `Вопрос ${questionNumber} из ${totalQuestions}:\n${progressBar}\n\nИзображение "${question.text}" не найдено в папке questions/`;
       await ctx.reply(message, { reply_markup: keyboard });
     }
   } catch (error) {
     console.error('Ошибка отправки изображения:', error);
     // Fallback на текстовое сообщение
-    const message = `Вопрос ${questionNumber} из ${totalQuestions}:\n\n${question.text}`;
+    const message = `Вопрос ${questionNumber} из ${totalQuestions}:\n${progressBar}\n\n${question.text}`;
     await ctx.reply(message, { reply_markup: keyboard });
   }
 }
