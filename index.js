@@ -3,6 +3,8 @@ const { Telegraf } = require('telegraf');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+const { getWelcomeText } = require('./welcome');
+const { handleTestStart } = require('./testStart');
 
 // Инициализация бота
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -171,16 +173,23 @@ const server = http.createServer(async (req, res) => {
 });
 
 // Обработка команды /start
-bot.command('start', (ctx) => {
+bot.command('start', async (ctx) => {
   const userId = ctx.from.id;
+  // Проверяем, проходил ли пользователь тест ранее
+  const hasState = userStates.has(userId);
+  const buttonText = hasState ? '🔄 Пройти снова' : '▶️ Начать тест';
+  const callbackData = hasState ? 'restart_test' : 'start_test';
+  await ctx.reply(' ', {
+    reply_markup: {
+      inline_keyboard: [[{ text: buttonText, callback_data: callbackData }]]
+    }
+  });
+});
 
-  // Инициализация состояния пользователя
-  userStates.set(userId, new UserState());
-  const userState = userStates.get(userId);
-  userState.archetypeScores = initializeArchetypeScores();
-
-  // Отправка первого вопроса
-  sendQuestion(ctx, userId);
+// Обработка нажатия на кнопку "Начать тест" или "Пройти снова"
+bot.action(['start_test', 'restart_test'], async (ctx) => {
+  await ctx.answerCbQuery();
+  await handleTestStart(ctx, userStates, initializeArchetypeScores, sendQuestion);
 });
 
 // Отправка вопроса пользователю
