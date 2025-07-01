@@ -3,8 +3,6 @@ const { Telegraf } = require('telegraf');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
-const { getWelcomeText } = require('./welcome');
-const { handleTestStart } = require('./testStart');
 
 // Инициализация бота
 const bot = new Telegraf(process.env.BOT_TOKEN);
