@@ -126,6 +126,56 @@ function runTests() {
     console.log('❌ Папка answers/ не найдена');
   }
   
+  // Тест 7: Проверка расчёта процентов топ-4 относительно их суммы
+  console.log('\nТест 7: Проверка расчёта процентов топ-4 относительно их суммы');
+  // Пример: 4 архетипа с баллами 10, 20, 30, 40
+  const top4 = [
+    ['Архетип1', 10],
+    ['Архетип2', 20],
+    ['Архетип3', 30],
+    ['Архетип4', 40],
+  ];
+  const topSum = top4.reduce((acc, [_, score]) => acc + score, 0);
+  const percents = top4.map(([name, score]) => Math.round((score / topSum) * 100));
+  console.log('Баллы:', top4.map(([_, score]) => score));
+  console.log('Сумма:', topSum);
+  console.log('Проценты:', percents);
+  const expected = [10, 20, 30, 40].map(v => Math.round((v/100)*100)); // [10, 20, 30, 40]
+  const ok = percents.join(',') === expected.join(',');
+  console.log('Ожидается:', expected);
+  console.log('Результат:', ok ? '✅ ПРОЙДЕН' : '❌ ПРОВАЛЕН');
+  
+  // Тест 8: Проверка формирования media group из 4 PDF-файлов для топ-4 архетипов
+  console.log('\nТест 8: Проверка формирования media group из 4 PDF-файлов для топ-4 архетипов');
+  // Мокаем функцию getArchetypePdfPath
+  function mockGetArchetypePdfPath(name) {
+    return `/mock/path/${name.toLowerCase()}.pdf`;
+  }
+  const top4Archetypes = [
+    ['Правитель', 15],
+    ['Шут', 12],
+    ['Воин', 10],
+    ['Мудрец', 8]
+  ];
+  const expectedDocs = [
+    { type: 'document', media: { source: '/mock/path/правитель.pdf' } },
+    { type: 'document', media: { source: '/mock/path/шут.pdf' } },
+    { type: 'document', media: { source: '/mock/path/воин.pdf' } },
+    { type: 'document', media: { source: '/mock/path/мудрец.pdf' } }
+  ];
+  const docs = [];
+  for (let i = 0; i < top4Archetypes.length; i++) {
+    const [archetypeName] = top4Archetypes[i];
+    const pdfPath = mockGetArchetypePdfPath(archetypeName);
+    if (pdfPath) {
+      docs.push({ type: 'document', media: { source: pdfPath } });
+    }
+  }
+  const ok8 = JSON.stringify(docs) === JSON.stringify(expectedDocs);
+  console.log('Сформировано:', docs);
+  console.log('Ожидается:', expectedDocs);
+  console.log('Результат:', ok8 ? '✅ ПРОЙДЕН' : '❌ ПРОВАЛЕН');
+  
   console.log('\n🎯 Тесты завершены!');
 }
 

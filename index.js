@@ -319,33 +319,18 @@ async function showResults(ctx, userId) {
   // Отправляем результаты
   await ctx.reply(resultMessage);
 
-  // Отправляем PDF файлы для топ-4 архетипов
+  // Собираем массив документов для отправки группой
+  const documents = [];
   for (let i = 0; i < sortedArchetypes.length; i++) {
-    const [archetypeName, score] = sortedArchetypes[i];
+    const [archetypeName] = sortedArchetypes[i];
     const pdfPath = getArchetypePdfPath(archetypeName);
-    
     if (pdfPath) {
-      try {
-        const caption = `📖 ${archetypeName} - подробное описание архетипа`;
-        await ctx.replyWithDocument(
-          { source: pdfPath },
-          { caption: caption }
-        );
-        
-        // Небольшая задержка между отправками файлов
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (error) {
-        console.error(`Ошибка отправки PDF для архетипа ${archetypeName}:`, error);
-        await ctx.reply(`❌ Не удалось отправить описание архетипа "${archetypeName}"`);
-      }
-    } else {
-      console.error(`PDF файл не найден для архетипа: ${archetypeName}`);
-      await ctx.reply(`⚠️ Описание архетипа "${archetypeName}" не найдено`);
+      documents.push({ type: 'document', media: { source: pdfPath } });
     }
   }
-
-  // Финальное сообщение
-  await ctx.reply('✅ Все описания отправлены!\n\nДля прохождения теста заново используйте /start');
+  if (documents.length > 0) {
+    await ctx.replyWithMediaGroup(documents);
+  }
 
   // Очищаем состояние пользователя
   userStates.delete(userId);
