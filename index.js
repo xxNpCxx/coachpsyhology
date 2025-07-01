@@ -187,7 +187,13 @@ bot.command('start', async (ctx) => {
 // Обработка нажатия на кнопку "Начать тест" или "Пройти снова"
 bot.action(['start_test', 'restart_test'], async (ctx) => {
   await ctx.answerCbQuery();
-  await handleTestStart(ctx, userStates, initializeArchetypeScores, sendQuestion);
+  const userId = ctx.from.id;
+  userStates.set(userId, {
+    currentQuestionIndex: 0,
+    answers: [],
+    archetypeScores: initializeArchetypeScores()
+  });
+  await sendQuestion(ctx, userId);
 });
 
 // Отправка вопроса пользователю
