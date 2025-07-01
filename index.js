@@ -316,8 +316,9 @@ async function showResults(ctx, userId) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4); // Берем топ-4
 
-  let resultMessage = '🎯 Результаты вашего теста архетипов:\n\n';
-  resultMessage += 'Ваши 4 наиболее выраженных архетипа:\n\n';
+  let resultMessage = `✅ РЕЗУЛЬТАТЫ 
+
+4 наиболее выраженных архетипа:`;
 
   // Сумма баллов топ-4 архетипов
   const topSum = sortedArchetypes.reduce((acc, [_, score]) => acc + score, 0) || 1;
@@ -328,8 +329,6 @@ async function showResults(ctx, userId) {
     const percentage = Math.round((score / topSum) * 100);
     resultMessage += `${index + 1}. ${name}: ${score} баллов (${percentage}%)\n`;
   });
-
-  resultMessage += '\n📚 Отправляю подробные описания ваших архетипов...';
 
   // Отправляем результаты
   await ctx.reply(resultMessage);
