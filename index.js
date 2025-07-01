@@ -3,6 +3,7 @@ const { Telegraf } = require('telegraf');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+const { logEvent } = require('./logger');
 
 // Инициализация бота
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -173,6 +174,11 @@ const server = http.createServer(async (req, res) => {
 // Обработка команды /start
 bot.command('start', async (ctx) => {
   const userId = ctx.from.id;
+  // Логируем команду /start
+  logEvent(userId, 'start_command', {
+    username: ctx.from.username,
+    language_code: ctx.from.language_code
+  });
   // Проверяем, проходил ли пользователь тест ранее
   const hasState = userStates.has(userId);
   const buttonText = hasState ? '🔄 Пройти снова' : '▶️ Начать тест';
@@ -190,6 +196,8 @@ bot.command('start', async (ctx) => {
 bot.action(['start_test', 'restart_test'], async (ctx) => {
   await ctx.answerCbQuery();
   const userId = ctx.from.id;
+  // Логируем начало теста
+  logEvent(userId, 'test_started');
   userStates.set(userId, {
     currentQuestionIndex: 0,
     answers: [],
@@ -310,6 +318,13 @@ bot.action(/answer_(\d)/, async (ctx) => {
 
   // Отправляем следующий вопрос
   await sendQuestion(ctx, userId);
+
+  // Логируем ответ на вопрос
+  logEvent(userId, 'question_answered', {
+    questionIndex: userState.currentQuestionIndex,
+    answer: answer,
+    archetype: currentQuestion.archetype
+  });
 });
 
 // Показ результатов теста
@@ -353,6 +368,11 @@ async function showResults(ctx, userId) {
 
   // Очищаем состояние пользователя
   userStates.delete(userId);
+
+  // Логируем завершение теста
+  logEvent(userId, 'test_completed', {
+    topArchetypes: sortedArchetypes
+  });
 }
 
 // Обработка ошибок
