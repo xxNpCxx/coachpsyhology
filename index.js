@@ -304,11 +304,13 @@ async function showResults(ctx, userId) {
   let resultMessage = '🎯 Результаты вашего теста архетипов:\n\n';
   resultMessage += 'Ваши 4 наиболее выраженных архетипа:\n\n';
 
+  // Сумма баллов топ-4 архетипов
+  const topSum = sortedArchetypes.reduce((acc, [_, score]) => acc + score, 0) || 1;
+
   sortedArchetypes.forEach((archetype, index) => {
     const [name, score] = archetype;
-    const maxPossibleScore = archetypesData[name].length * 3;
-    const percentage = Math.round((score / maxPossibleScore) * 100);
-
+    // Новый расчет процентов относительно суммы топ-4
+    const percentage = Math.round((score / topSum) * 100);
     resultMessage += `${index + 1}. ${name}: ${score} баллов (${percentage}%)\n`;
   });
 
