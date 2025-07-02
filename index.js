@@ -172,9 +172,34 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+// Проверка подписки пользователя на канал
+async function checkSubscription(userId) {
+  const channel = process.env.REQUIRED_CHANNEL;
+  if (!channel) return true; // если канал не задан, пропускаем проверку
+  try {
+    const member = await bot.telegram.getChatMember(channel, userId);
+    // Статусы, при которых пользователь считается подписанным
+    const allowed = ['member', 'administrator', 'creator'];
+    return allowed.includes(member.status);
+  } catch (e) {
+    // Если канал приватный или ошибка — считаем, что не подписан
+    return false;
+  }
+}
+
 // Обработка команды /start
 bot.command('start', async (ctx) => {
   const userId = ctx.from.id;
+  // Проверяем подписку
+  const isSubscribed = await checkSubscription(userId);
+  if (!isSubscribed) {
+    await ctx.reply('Для прохождения теста подпишитесь на канал и попробуйте снова.', {
+      reply_markup: {
+        inline_keyboard: [[{ text: 'Подписаться', url: process.env.REQUIRED_CHANNEL.startsWith('@') ? `https://t.me/${process.env.REQUIRED_CHANNEL.slice(1)}` : process.env.REQUIRED_CHANNEL }]]
+      }
+    });
+    return;
+  }
   // Сохраняем пользователя в Mixpanel (people.set_once)
   setUserOnce(userId, {
     username: ctx.from.username,
@@ -200,6 +225,16 @@ bot.command('start', async (ctx) => {
 bot.action(['start_test', 'restart_test'], async (ctx) => {
   await ctx.answerCbQuery();
   const userId = ctx.from.id;
+  // Проверяем подписку
+  const isSubscribed = await checkSubscription(userId);
+  if (!isSubscribed) {
+    await ctx.reply('Для прохождения теста подпишитесь на канал и попробуйте снова.', {
+      reply_markup: {
+        inline_keyboard: [[{ text: 'Подписаться', url: process.env.REQUIRED_CHANNEL.startsWith('@') ? `https://t.me/${process.env.REQUIRED_CHANNEL.slice(1)}` : process.env.REQUIRED_CHANNEL }]]
+      }
+    });
+    return;
+  }
   // Отправляем событие в Mixpanel
   trackEvent(userId, 'test_started', {});
   userStates.set(userId, {
@@ -212,6 +247,16 @@ bot.action(['start_test', 'restart_test'], async (ctx) => {
 
 // Отправка вопроса пользователю
 async function sendQuestion(ctx, userId) {
+  // Проверяем подписку
+  const isSubscribed = await checkSubscription(userId);
+  if (!isSubscribed) {
+    await ctx.reply('Чтобы продолжить прохождение теста, подпишитесь на канал.', {
+      reply_markup: {
+        inline_keyboard: [[{ text: 'Подписаться', url: process.env.REQUIRED_CHANNEL.startsWith('@') ? `https://t.me/${process.env.REQUIRED_CHANNEL.slice(1)}` : process.env.REQUIRED_CHANNEL }]]
+      }
+    });
+    return;
+  }
   const userState = userStates.get(userId);
 
   if (userState.currentQuestionIndex >= questions.length) {
@@ -276,6 +321,16 @@ async function sendQuestion(ctx, userId) {
 // Обработка ответов пользователя
 bot.action(/answer_(\d)/, async (ctx) => {
   const userId = ctx.from.id;
+  // Проверяем подписку
+  const isSubscribed = await checkSubscription(userId);
+  if (!isSubscribed) {
+    await ctx.reply('Чтобы продолжить прохождение теста, подпишитесь на канал.', {
+      reply_markup: {
+        inline_keyboard: [[{ text: 'Подписаться', url: process.env.REQUIRED_CHANNEL.startsWith('@') ? `https://t.me/${process.env.REQUIRED_CHANNEL.slice(1)}` : process.env.REQUIRED_CHANNEL }]]
+      }
+    });
+    return;
+  }
   const answer = parseInt(ctx.match[1]);
 
   // Сразу отвечаем на callback query, чтобы избежать ошибки
