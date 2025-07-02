@@ -542,17 +542,7 @@ server.listen(PORT, async () => {
     });
   });
   
-  // Обработка callback-кнопки 'Я подписался'
-  bot.action('check_subscription', async (ctx) => {
-    const userId = ctx.from.id;
-    const isSubscribed = await checkSubscription(userId);
-    if (!isSubscribed) {
-      await ctx.answerCbQuery('Вы ещё не подписались на канал!', { show_alert: true });
-      await ctx.reply('Для прохождения теста подпишитесь на канал и нажмите "Я подписался".', {
-        reply_markup: getSubscriptionKeyboard()
-      });
-      return;
-    }
+
     // Повторяем логику /start, но без приветствия
     const hasState = userStates.has(userId);
     const buttonText = hasState ? '🔄 Пройти снова' : '▶️ Начать тест';
@@ -564,6 +554,18 @@ server.listen(PORT, async () => {
     });
   });
   
+    // Обработка callback-кнопки 'Я подписался'
+    bot.action('check_subscription', async (ctx) => {
+      const userId = ctx.from.id;
+      const isSubscribed = await checkSubscription(userId);
+      if (!isSubscribed) {
+        await ctx.answerCbQuery('Вы ещё не подписались на канал!', { show_alert: true });
+        await ctx.reply('Для прохождения теста подпишитесь на канал и нажмите "Я подписался".', {
+          reply_markup: getSubscriptionKeyboard()
+        });
+        return;
+      }
+      
   // Обработка неизвестных callback queries (должен быть последним)
   bot.action(/.*/, async (ctx) => {
     try {
