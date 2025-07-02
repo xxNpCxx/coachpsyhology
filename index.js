@@ -182,11 +182,7 @@ bot.command('start', async (ctx) => {
     language_code: ctx.from.language_code
   });
   // Отправляем событие в Mixpanel
-  trackEvent(userId, 'start_command', {
-    username: ctx.from.username,
-    first_name: ctx.from.first_name,
-    language_code: ctx.from.language_code
-  });
+  trackEvent(userId, 'start_command', {});
   // Проверяем, проходил ли пользователь тест ранее
   const hasState = userStates.has(userId);
   const buttonText = hasState ? '🔄 Пройти снова' : '▶️ Начать тест';
@@ -205,11 +201,7 @@ bot.action(['start_test', 'restart_test'], async (ctx) => {
   await ctx.answerCbQuery();
   const userId = ctx.from.id;
   // Отправляем событие в Mixpanel
-  trackEvent(userId, 'test_started', {
-    username: ctx.from.username,
-    first_name: ctx.from.first_name,
-    language_code: ctx.from.language_code
-  });
+  trackEvent(userId, 'test_started', {});
   userStates.set(userId, {
     currentQuestionIndex: 0,
     answers: [],
@@ -333,9 +325,6 @@ bot.action(/answer_(\d)/, async (ctx) => {
 
   // Отправляем событие в Mixpanel
   trackEvent(userId, 'question_answered', {
-    username: ctx.from.username,
-    first_name: ctx.from.first_name,
-    language_code: ctx.from.language_code,
     questionIndex: userState.currentQuestionIndex,
     answer: answer,
     archetype: currentQuestion.archetype
@@ -386,9 +375,6 @@ async function showResults(ctx, userId) {
 
   // Отправляем событие в Mixpanel
   trackEvent(userId, 'test_completed', {
-    username: ctx.from.username,
-    first_name: ctx.from.first_name,
-    language_code: ctx.from.language_code,
     topArchetypes: sortedArchetypes
   });
 }
