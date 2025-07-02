@@ -202,6 +202,9 @@ function getSubscriptionKeyboard() {
     inline_keyboard: [
       [
         { text: 'Подписаться', url: getChannelLink() }
+      ],
+      [
+        { text: 'Я подписался', callback_data: 'check_subscription' }
       ]
     ]
   };
@@ -218,17 +221,6 @@ function getReplyStartKeyboard() {
 // Обработка команды /start
 bot.command('start', async (ctx) => {
   const userId = ctx.from.id;
-  // Проверяем подписку
-  const isSubscribed = await checkSubscription(userId);
-  if (!isSubscribed) {
-    await ctx.reply('Для прохождения теста подпишитесь на канал, затем нажмите /start.', {
-      reply_markup: getSubscriptionKeyboard()
-    });
-    await ctx.reply('После подписки нажмите /start', {
-      reply_markup: getReplyStartKeyboard()
-    });
-    return;
-  }
   // Сохраняем пользователя в Mixpanel (people.set_once)
   setUserOnce(userId, {
     username: ctx.from.username,
@@ -260,9 +252,6 @@ bot.action(['start_test', 'restart_test'], async (ctx) => {
     await ctx.reply('Для прохождения теста подпишитесь на канал, затем нажмите /start.', {
       reply_markup: getSubscriptionKeyboard()
     });
-    await ctx.reply('После подписки нажмите /start', {
-      reply_markup: getReplyStartKeyboard()
-    });
     return;
   }
   // Отправляем событие в Mixpanel
@@ -282,9 +271,6 @@ async function sendQuestion(ctx, userId) {
   if (!isSubscribed) {
     await ctx.reply('Чтобы продолжить прохождение теста, подпишитесь на канал, затем нажмите /start.', {
       reply_markup: getSubscriptionKeyboard()
-    });
-    await ctx.reply('После подписки нажмите /start', {
-      reply_markup: getReplyStartKeyboard()
     });
     return;
   }
@@ -357,9 +343,6 @@ bot.action(/answer_(\d)/, async (ctx) => {
   if (!isSubscribed) {
     await ctx.reply('Чтобы продолжить прохождение теста, подпишитесь на канал, затем нажмите /start.', {
       reply_markup: getSubscriptionKeyboard()
-    });
-    await ctx.reply('После подписки нажмите /start', {
-      reply_markup: getReplyStartKeyboard()
     });
     return;
   }
@@ -567,4 +550,22 @@ bot.action(/.*/, async (ctx) => {
   } catch (error) {
     console.log('Не удалось ответить на неизвестный callback query:', error.message);
   }
+});
+
+// Обработка нажатия на кнопку "Я подписался"
+bot.action('check_subscription', async (ctx) => {
+  await ctx.answerCbQuery();
+  const userId = ctx.from.id;
+  const isSubscribed = await checkSubscription(userId);
+  if (!isSubscribed) {
+    await ctx.reply('Похоже, вы ещё не подписались. Пожалуйста, подпишитесь на канал и попробуйте снова.', {
+      reply_markup: getSubscriptionKeyboard()
+    });
+    return;
+  }
+  await ctx.reply('Спасибо за подписку! Теперь вы можете начать тест.', {
+    reply_markup: {
+      inline_keyboard: [[{ text: '▶️ Начать тест', callback_data: 'start_test' }]]
+    }
+  });
 });
