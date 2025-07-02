@@ -178,8 +178,8 @@ bot.command('start', async (ctx) => {
   // Сохраняем пользователя в Mixpanel (people.set_once)
   setUserOnce(userId, {
     username: ctx.from.username,
-    first_name: ctx.from.first_name,
-    language_code: ctx.from.language_code
+    first_name: ctx.from.first_name + ' ' + ctx.from.last_name,
+    language_code: ctx.from.language_code,
   });
   // Отправляем событие в Mixpanel
   trackEvent(userId, 'start_command', {});
