@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const { logEvent } = require('./logger');
-const { trackEvent } = require('./analytics');
+const { trackEvent, setUserOnce } = require('./analytics');
 
 // Инициализация бота
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -175,6 +175,12 @@ const server = http.createServer(async (req, res) => {
 // Обработка команды /start
 bot.command('start', async (ctx) => {
   const userId = ctx.from.id;
+  // Сохраняем пользователя в Mixpanel (people.set_once)
+  setUserOnce(userId, {
+    username: ctx.from.username,
+    first_name: ctx.from.first_name,
+    language_code: ctx.from.language_code
+  });
   // Отправляем событие в Mixpanel
   trackEvent(userId, 'start_command', {
     username: ctx.from.username,
@@ -431,6 +437,63 @@ server.listen(PORT, async () => {
       console.log('⚠️ Не удалось установить webhook автоматически:', error.message);
     }
   }
+
+  // Проверяем наличие изображений
+  const questionsFolder = path.join(__dirname, 'questions');
+  if (fs.existsSync(questionsFolder)) {
+    const files = fs.readdirSync(questionsFolder);
+    console.log(`🖼️ Найдено ${files.length} файлов в папке questions/`);
+  } else {
+    console.log('⚠️ Папка questions/ не найдена');
+  }
+  
+  // Проверяем наличие PDF файлов архетипов
+  const answersFolder = path.join(__dirname, 'answers');
+  if (fs.existsSync(answersFolder)) {
+    const pdfFiles = fs.readdirSync(answersFolder).filter(file => file.endsWith('.pdf'));
+    console.log(`📚 Найдено ${pdfFiles.length} PDF файлов в папке answers/`);
+    
+    // Проверяем соответствие PDF файлов архетипам
+    const archetypeNames = Object.keys(archetypesData);
+    const missingPdfs = archetypeNames.filter(archetype => {
+      const pdfPath = path.join(answersFolder, archetype.toLowerCase() + '.pdf');
+      return !fs.existsSync(pdfPath);
+    });
+    
+    if (missingPdfs.length > 0) {
+      console.log('⚠️ Отсутствуют PDF файлы для архетипов:', missingPdfs);
+    } else {
+      console.log('✅ Все PDF файлы архетипов найдены');
+    }
+  } else {
+    console.log('⚠️ Папка answers/ не найдена');
+  }
+  
+  // Graceful stop (только для HTTP сервера, не для бота)
+  process.once('SIGINT', () => {
+    console.log('Получен сигнал SIGINT, останавливаем сервер...');
+    server.close(() => {
+      console.log('HTTP сервер остановлен');
+      process.exit(0);
+    });
+  });
+  
+  process.once('SIGTERM', () => {
+    console.log('Получен сигнал SIGTERM, останавливаем сервер...');
+    server.close(() => {
+      console.log('HTTP сервер остановлен');
+      process.exit(0);
+    });
+  });
+  
+  // Обработка неизвестных callback queries (должен быть последним)
+  bot.action(/.*/, async (ctx) => {
+    try {
+      await ctx.answerCbQuery('Неизвестная команда');
+    } catch (error) {
+      console.log('Не удалось ответить на неизвестный callback query:', error.message);
+    }
+  });
 });
 
 // Инициализация бота (без launch)
@@ -494,4 +557,4 @@ bot.action(/.*/, async (ctx) => {
   } catch (error) {
     console.log('Не удалось ответить на неизвестный callback query:', error.message);
   }
-}); 
+});
