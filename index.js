@@ -174,10 +174,10 @@ const server = http.createServer(async (req, res) => {
 
 // Проверка подписки пользователя на канал
 async function checkSubscription(userId) {
-  const channel = process.env.REQUIRED_CHANNEL;
-  if (!channel) return true; // если канал не задан, пропускаем проверку
+  const channelId = process.env.REQUIRED_CHANNEL_ID;
+  if (!channelId) return true; // если канал не задан, пропускаем проверку
   try {
-    const member = await bot.telegram.getChatMember(channel, userId);
+    const member = await bot.telegram.getChatMember(channelId, userId);
     // Статусы, при которых пользователь считается подписанным
     const allowed = ['member', 'administrator', 'creator'];
     return allowed.includes(member.status);
@@ -185,6 +185,15 @@ async function checkSubscription(userId) {
     // Если канал приватный или ошибка — считаем, что не подписан
     return false;
   }
+}
+
+function getChannelLink() {
+  const link = process.env.REQUIRED_CHANNEL_LINK;
+  if (!link) return undefined;
+  if (link.startsWith('@')) {
+    return `https://t.me/${link.slice(1)}`;
+  }
+  return link;
 }
 
 // Обработка команды /start
@@ -195,7 +204,7 @@ bot.command('start', async (ctx) => {
   if (!isSubscribed) {
     await ctx.reply('Для прохождения теста подпишитесь на канал и попробуйте снова.', {
       reply_markup: {
-        inline_keyboard: [[{ text: 'Подписаться', url: process.env.REQUIRED_CHANNEL.startsWith('@') ? `https://t.me/${process.env.REQUIRED_CHANNEL.slice(1)}` : process.env.REQUIRED_CHANNEL }]]
+        inline_keyboard: [[{ text: 'Подписаться', url: getChannelLink() }]]
       }
     });
     return;
@@ -230,7 +239,7 @@ bot.action(['start_test', 'restart_test'], async (ctx) => {
   if (!isSubscribed) {
     await ctx.reply('Для прохождения теста подпишитесь на канал и попробуйте снова.', {
       reply_markup: {
-        inline_keyboard: [[{ text: 'Подписаться', url: process.env.REQUIRED_CHANNEL.startsWith('@') ? `https://t.me/${process.env.REQUIRED_CHANNEL.slice(1)}` : process.env.REQUIRED_CHANNEL }]]
+        inline_keyboard: [[{ text: 'Подписаться', url: getChannelLink() }]]
       }
     });
     return;
@@ -252,7 +261,7 @@ async function sendQuestion(ctx, userId) {
   if (!isSubscribed) {
     await ctx.reply('Чтобы продолжить прохождение теста, подпишитесь на канал.', {
       reply_markup: {
-        inline_keyboard: [[{ text: 'Подписаться', url: process.env.REQUIRED_CHANNEL.startsWith('@') ? `https://t.me/${process.env.REQUIRED_CHANNEL.slice(1)}` : process.env.REQUIRED_CHANNEL }]]
+        inline_keyboard: [[{ text: 'Подписаться', url: getChannelLink() }]]
       }
     });
     return;
@@ -326,7 +335,7 @@ bot.action(/answer_(\d)/, async (ctx) => {
   if (!isSubscribed) {
     await ctx.reply('Чтобы продолжить прохождение теста, подпишитесь на канал.', {
       reply_markup: {
-        inline_keyboard: [[{ text: 'Подписаться', url: process.env.REQUIRED_CHANNEL.startsWith('@') ? `https://t.me/${process.env.REQUIRED_CHANNEL.slice(1)}` : process.env.REQUIRED_CHANNEL }]]
+        inline_keyboard: [[{ text: 'Подписаться', url: getChannelLink() }]]
       }
     });
     return;
