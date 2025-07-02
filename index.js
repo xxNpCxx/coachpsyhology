@@ -461,7 +461,16 @@ bot.catch((err, ctx) => {
 
   // Для других ошибок отправляем сообщение пользователю
   try {
-    ctx.reply('Произошла ошибка. Попробуйте еще раз или начните тест заново с /start');
+    ctx.reply(
+      'Произошла ошибка. Попробуйте еще раз или начните тест заново:',
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: 'Начать заново', callback_data: 'start_test' }]
+          ]
+        }
+      }
+    );
   } catch (replyError) {
     console.error('Не удалось отправить сообщение об ошибке:', replyError);
   }
