@@ -178,6 +178,7 @@ bot.command('start', async (ctx) => {
   // Отправляем событие в Mixpanel
   trackEvent(userId, 'start_command', {
     username: ctx.from.username,
+    first_name: ctx.from.first_name,
     language_code: ctx.from.language_code
   });
   // Проверяем, проходил ли пользователь тест ранее
@@ -198,7 +199,11 @@ bot.action(['start_test', 'restart_test'], async (ctx) => {
   await ctx.answerCbQuery();
   const userId = ctx.from.id;
   // Отправляем событие в Mixpanel
-  trackEvent(userId, 'test_started');
+  trackEvent(userId, 'test_started', {
+    username: ctx.from.username,
+    first_name: ctx.from.first_name,
+    language_code: ctx.from.language_code
+  });
   userStates.set(userId, {
     currentQuestionIndex: 0,
     answers: [],
@@ -322,6 +327,9 @@ bot.action(/answer_(\d)/, async (ctx) => {
 
   // Отправляем событие в Mixpanel
   trackEvent(userId, 'question_answered', {
+    username: ctx.from.username,
+    first_name: ctx.from.first_name,
+    language_code: ctx.from.language_code,
     questionIndex: userState.currentQuestionIndex,
     answer: answer,
     archetype: currentQuestion.archetype
@@ -372,6 +380,9 @@ async function showResults(ctx, userId) {
 
   // Отправляем событие в Mixpanel
   trackEvent(userId, 'test_completed', {
+    username: ctx.from.username,
+    first_name: ctx.from.first_name,
+    language_code: ctx.from.language_code,
     topArchetypes: sortedArchetypes
   });
 }
