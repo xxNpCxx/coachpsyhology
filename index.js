@@ -204,7 +204,7 @@ function getSubscriptionKeyboard() {
         { text: 'Подписаться', url: getChannelLink() }
       ],
       [
-        { text: 'Я подписался', callback_data: 'check_subscription' }
+        { text: '▶️ Начать тест', callback_data: 'start_test' }
       ]
     ]
   };
@@ -249,7 +249,7 @@ bot.action(['start_test', 'restart_test'], async (ctx) => {
   // Проверяем подписку
   const isSubscribed = await checkSubscription(userId);
   if (!isSubscribed) {
-    await ctx.reply('Для прохождения теста подпишитесь на канал, затем нажмите /start.', {
+    await ctx.reply('Для прохождения теста подпишитесь на канал.', {
       reply_markup: getSubscriptionKeyboard()
     });
     return;
