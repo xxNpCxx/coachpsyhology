@@ -357,7 +357,13 @@ bot.action(/answer_(\d)/, async (ctx) => {
   }
 
   if (!userStates.has(userId)) {
-    ctx.reply('Начните тест заново с команды /start');
+    ctx.reply('Тест не был начат или устарела сессия. Начните тест заново:', {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Начать заново', callback_data: 'start_test' }]
+        ]
+      }
+    });
     return;
   }
 
@@ -462,7 +468,7 @@ bot.catch((err, ctx) => {
   // Для других ошибок отправляем сообщение пользователю
   try {
     ctx.reply(
-      'Произошла ошибка. Попробуйте еще раз или начните тест заново:',
+      'Тест не был начат или устарела сессия. Начните тест заново:',
       {
         reply_markup: {
           inline_keyboard: [
