@@ -202,11 +202,16 @@ function getSubscriptionKeyboard() {
     inline_keyboard: [
       [
         { text: 'Подписаться', url: getChannelLink() }
-      ],
-      [
-        { text: 'Я подписался', callback_data: 'check_subscription' }
       ]
     ]
+  };
+}
+
+function getReplyStartKeyboard() {
+  return {
+    keyboard: [[{ text: '/start' }]],
+    resize_keyboard: true,
+    one_time_keyboard: true
   };
 }
 
@@ -216,8 +221,11 @@ bot.command('start', async (ctx) => {
   // Проверяем подписку
   const isSubscribed = await checkSubscription(userId);
   if (!isSubscribed) {
-    await ctx.reply('Для прохождения теста подпишитесь на канал и нажмите "Я подписался".', {
+    await ctx.reply('Для прохождения теста подпишитесь на канал, затем нажмите /start.', {
       reply_markup: getSubscriptionKeyboard()
+    });
+    await ctx.reply('После подписки нажмите /start', {
+      reply_markup: getReplyStartKeyboard()
     });
     return;
   }
@@ -249,8 +257,11 @@ bot.action(['start_test', 'restart_test'], async (ctx) => {
   // Проверяем подписку
   const isSubscribed = await checkSubscription(userId);
   if (!isSubscribed) {
-    await ctx.reply('Для прохождения теста подпишитесь на канал и нажмите "Я подписался".', {
+    await ctx.reply('Для прохождения теста подпишитесь на канал, затем нажмите /start.', {
       reply_markup: getSubscriptionKeyboard()
+    });
+    await ctx.reply('После подписки нажмите /start', {
+      reply_markup: getReplyStartKeyboard()
     });
     return;
   }
@@ -269,8 +280,11 @@ async function sendQuestion(ctx, userId) {
   // Проверяем подписку
   const isSubscribed = await checkSubscription(userId);
   if (!isSubscribed) {
-    await ctx.reply('Чтобы продолжить прохождение теста, подпишитесь на канал и нажмите "Я подписался".', {
+    await ctx.reply('Чтобы продолжить прохождение теста, подпишитесь на канал, затем нажмите /start.', {
       reply_markup: getSubscriptionKeyboard()
+    });
+    await ctx.reply('После подписки нажмите /start', {
+      reply_markup: getReplyStartKeyboard()
     });
     return;
   }
@@ -341,8 +355,11 @@ bot.action(/answer_(\d)/, async (ctx) => {
   // Проверяем подписку
   const isSubscribed = await checkSubscription(userId);
   if (!isSubscribed) {
-    await ctx.reply('Чтобы продолжить прохождение теста, подпишитесь на канал и нажмите "Я подписался".', {
+    await ctx.reply('Чтобы продолжить прохождение теста, подпишитесь на канал, затем нажмите /start.', {
       reply_markup: getSubscriptionKeyboard()
+    });
+    await ctx.reply('После подписки нажмите /start', {
+      reply_markup: getReplyStartKeyboard()
     });
     return;
   }
@@ -540,66 +557,6 @@ server.listen(PORT, async () => {
       console.log('HTTP сервер остановлен');
       process.exit(0);
     });
-  });
-});
-
-// Обработка callback-кнопки 'Я подписался'
-bot.action('check_subscription', async (ctx) => {
-  await ctx.answerCbQuery();
-  await ctx.telegram.sendMessage(ctx.from.id, '/start');
-});
-
-// Инициализация бота (без launch)
-console.log('🤖 Бот инициализирован для работы через webhook!');
-console.log('📝 Добавьте изображения в папку questions/');
-console.log('🔑 Установите BOT_TOKEN в .env файле');
-console.log(`📊 Загружено ${Object.keys(archetypesData).length} архетипов с ${questions.length} вопросами`);
-
-// Проверяем наличие изображений
-const questionsFolder = path.join(__dirname, 'questions');
-if (fs.existsSync(questionsFolder)) {
-  const files = fs.readdirSync(questionsFolder);
-  console.log(`🖼️ Найдено ${files.length} файлов в папке questions/`);
-} else {
-  console.log('⚠️ Папка questions/ не найдена');
-}
-
-// Проверяем наличие PDF файлов архетипов
-const answersFolder = path.join(__dirname, 'answers');
-if (fs.existsSync(answersFolder)) {
-  const pdfFiles = fs.readdirSync(answersFolder).filter(file => file.endsWith('.pdf'));
-  console.log(`📚 Найдено ${pdfFiles.length} PDF файлов в папке answers/`);
-  
-  // Проверяем соответствие PDF файлов архетипам
-  const archetypeNames = Object.keys(archetypesData);
-  const missingPdfs = archetypeNames.filter(archetype => {
-    const pdfPath = path.join(answersFolder, archetype.toLowerCase() + '.pdf');
-    return !fs.existsSync(pdfPath);
-  });
-  
-  if (missingPdfs.length > 0) {
-    console.log('⚠️ Отсутствуют PDF файлы для архетипов:', missingPdfs);
-  } else {
-    console.log('✅ Все PDF файлы архетипов найдены');
-  }
-} else {
-  console.log('⚠️ Папка answers/ не найдена');
-}
-
-// Graceful stop (только для HTTP сервера, не для бота)
-process.once('SIGINT', () => {
-  console.log('Получен сигнал SIGINT, останавливаем сервер...');
-  server.close(() => {
-    console.log('HTTP сервер остановлен');
-    process.exit(0);
-  });
-});
-
-process.once('SIGTERM', () => {
-  console.log('Получен сигнал SIGTERM, останавливаем сервер...');
-  server.close(() => {
-    console.log('HTTP сервер остановлен');
-    process.exit(0);
   });
 });
 
