@@ -542,6 +542,28 @@ server.listen(PORT, async () => {
     });
   });
   
+  // Обработка callback-кнопки 'Я подписался'
+  bot.action('check_subscription', async (ctx) => {
+    const userId = ctx.from.id;
+    const isSubscribed = await checkSubscription(userId);
+    if (!isSubscribed) {
+      await ctx.answerCbQuery('Вы ещё не подписались на канал!', { show_alert: true });
+      await ctx.reply('Для прохождения теста подпишитесь на канал и нажмите "Я подписался".', {
+        reply_markup: getSubscriptionKeyboard()
+      });
+      return;
+    }
+    // Повторяем логику /start, но без приветствия
+    const hasState = userStates.has(userId);
+    const buttonText = hasState ? '🔄 Пройти снова' : '▶️ Начать тест';
+    const callbackData = hasState ? 'restart_test' : 'start_test';
+    await ctx.reply(`На каждом слайде вы увидите утверждение и 4 варианта ответа.\nВаша задача - выбрать, насколько каждое из утверждений вам соответствует.\nДля более точного результата рекомендуется проходить в одиночестве. Старайтесь отвечать честно и осознанно.`, {
+      reply_markup: {
+        inline_keyboard: [[{ text: buttonText, callback_data: callbackData }]]
+      }
+    });
+  });
+  
   // Обработка неизвестных callback queries (должен быть последним)
   bot.action(/.*/, async (ctx) => {
     try {
@@ -613,25 +635,4 @@ bot.action(/.*/, async (ctx) => {
   } catch (error) {
     console.log('Не удалось ответить на неизвестный callback query:', error.message);
   }
-});
-
-bot.action('check_subscription', async (ctx) => {
-  const userId = ctx.from.id;
-  const isSubscribed = await checkSubscription(userId);
-  if (!isSubscribed) {
-    await ctx.answerCbQuery('Вы ещё не подписались на канал!', { show_alert: true });
-    await ctx.reply('Для прохождения теста подпишитесь на канал и нажмите "Я подписался".', {
-      reply_markup: getSubscriptionKeyboard()
-    });
-    return;
-  }
-  // Повторяем логику /start, но без приветствия
-  const hasState = userStates.has(userId);
-  const buttonText = hasState ? '🔄 Пройти снова' : '▶️ Начать тест';
-  const callbackData = hasState ? 'restart_test' : 'start_test';
-  await ctx.reply(`На каждом слайде вы увидите утверждение и 4 варианта ответа.\nВаша задача - выбрать, насколько каждое из утверждений вам соответствует.\nДля более точного результата рекомендуется проходить в одиночестве. Старайтесь отвечать честно и осознанно.`, {
-    reply_markup: {
-      inline_keyboard: [[{ text: buttonText, callback_data: callbackData }]]
-    }
-  });
 });
