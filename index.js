@@ -289,7 +289,7 @@ async function sendQuestion(ctx, userId) {
         'Чтобы продолжить тест, оставьте комментарий с текстом "тест" в нашей группе, затем вернитесь сюда и нажмите /continue',
         {
           reply_markup: {
-            inline_keyboard: [[{ text: 'Группа для комментария', url: 'https://t.me/+Qw1W75kOlhYyZDEy' }]]
+            inline_keyboard: [[{ text: 'Группа для комментария', url: 'https://t.me/+FpGOgI0YLAdiNmJi' }]]
           }
         }
       );
@@ -622,7 +622,7 @@ bot.command('continue', async (ctx) => {
         'Чтобы продолжить тест, сперва оставьте комментарий с текстом "тест" в нашей группе, затем вернитесь сюда и нажмите /continue',
         {
           reply_markup: {
-            inline_keyboard: [[{ text: 'Группа для комментария', url: 'https://t.me/+Qw1W75kOlhYyZDEy' }]]
+            inline_keyboard: [[{ text: 'Группа для комментария', url: 'https://t.me/+FpGOgI0YLAdiNmJi' }]]
           }
         }
       );
