@@ -280,8 +280,8 @@ async function sendQuestion(ctx, userId) {
   const userState = userStates.get(userId);
   console.log('sendQuestion для', userId, 'currentQuestionIndex:', userState.currentQuestionIndex, 'allowedToContinue:', Array.from(allowedToContinue), 'waitingForComment:', Array.from(waitingForComment));
 
-  // --- Исправлено: После второго вопроса — пауза и просьба оставить комментарий ---
-  if (userState.currentQuestionIndex === 2) {
+  // --- Новая логика: проверка комментария после каждого 5-го вопроса ---
+  if (userState.currentQuestionIndex > 0 && userState.currentQuestionIndex % 5 === 0) {
     if (!allowedToContinue.has(userId)) {
       waitingForComment.add(userId);
       console.log('Пользователь должен оставить комментарий, добавлен в waitingForComment:', Array.from(waitingForComment));
