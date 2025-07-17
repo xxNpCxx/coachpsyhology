@@ -646,20 +646,7 @@ bot.on('message', async (ctx, next) => {
     if (text.toLowerCase().includes('тест')) {
       allowedToContinue.add(ctx.from.id);
       console.log('allowedToContinue теперь:', Array.from(allowedToContinue));
-      // Отвечаем на комментарий с кнопкой
-      try {
-        await ctx.reply(
-          `@${ctx.from.username || ctx.from.first_name}, пройти тест можно по кнопке ниже!`,
-          {
-            reply_to_message_id: ctx.message.message_id,
-            reply_markup: {
-              inline_keyboard: [[{ text: 'Пройти тест', url: 'https://t.me/coach_psychology_bot' }]]
-            }
-          }
-        );
-      } catch (e) {
-        console.error('Ошибка при ответе на комментарий:', e);
-      }
+      // Больше не отвечаем на комментарий
     }
   }
   await next();
