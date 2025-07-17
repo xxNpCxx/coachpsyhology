@@ -276,16 +276,19 @@ async function sendQuestion(ctx, userId) {
   }
   const userState = userStates.get(userId);
 
-  // Проверка после второго вопроса
+  // --- Исправлено: После второго вопроса — пауза и просьба оставить комментарий ---
   if (userState.currentQuestionIndex === 2) {
-    // Если пользователь не оставил комментарий, требуем это
     if (!allowedToContinue.has(userId)) {
       waitingForComment.add(userId);
       await ctx.reply(
-        'Чтобы продолжить тест, оставьте комментарий с текстом "тест" под любым постом в нашем канале, затем вернитесь сюда и нажмите /continue',
-        { reply_markup: getReplyStartKeyboard() }
+        'Чтобы продолжить тест, оставьте комментарий с текстом "тест" в нашей группе, затем вернитесь сюда и нажмите /continue',
+        {
+          reply_markup: {
+            inline_keyboard: [[{ text: 'Группа для комментария', url: 'https://t.me/+Qw1W75kOlhYyZDEy' }]]
+          }
+        }
       );
-      return;
+      return; // Не продолжаем тест!
     }
   }
 
