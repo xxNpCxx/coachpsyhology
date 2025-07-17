@@ -276,6 +276,19 @@ async function sendQuestion(ctx, userId) {
   }
   const userState = userStates.get(userId);
 
+  // Проверка после второго вопроса
+  if (userState.currentQuestionIndex === 2) {
+    // Если пользователь не оставил комментарий, требуем это
+    if (!allowedToContinue.has(userId)) {
+      waitingForComment.add(userId);
+      await ctx.reply(
+        'Чтобы продолжить тест, оставьте комментарий с текстом "тест" под любым постом в нашем канале, затем вернитесь сюда и нажмите /continue',
+        { reply_markup: getReplyStartKeyboard() }
+      );
+      return;
+    }
+  }
+
   if (userState.currentQuestionIndex >= questions.length) {
     // Тест завершен, показываем результаты
     showResults(ctx, userId);
@@ -448,6 +461,8 @@ async function showResults(ctx, userId) {
 
   // Очищаем состояние пользователя
   userStates.delete(userId);
+  allowedToContinue.delete(userId); // сбрасываем разрешение
+  waitingForComment.delete(userId); // сбрасываем ожидание
 
   // Отправляем событие в Mixpanel
   trackEvent(userId, 'test_completed', {
@@ -583,4 +598,45 @@ bot.action('check_subscription', async (ctx) => {
       inline_keyboard: [[{ text: '▶️ Начать тест', callback_data: 'start_test' }]]
     }
   });
+});
+
+// --- ДОБАВЛЕНО: Команда /continue для повторной проверки ---
+bot.command('continue', async (ctx) => {
+  const userId = ctx.from.id;
+  if (waitingForComment.has(userId)) {
+    if (allowedToContinue.has(userId)) {
+      waitingForComment.delete(userId);
+      await sendQuestion(ctx, userId);
+    } else {
+      await ctx.reply('Комментарий с текстом "тест" не найден. Пожалуйста, оставьте комментарий и попробуйте снова.');
+    }
+  } else {
+    await ctx.reply('Вам не нужно использовать эту команду сейчас.');
+  }
+});
+
+// --- ДОБАВЛЕНО: Отслеживание комментариев в группе ---
+bot.on('message', async (ctx, next) => {
+  // Проверяем, что сообщение из нужной группы
+  if (ctx.chat && ctx.chat.id === COMMENT_GROUP_ID) {
+    const text = ctx.message.text || '';
+    if (text.toLowerCase().includes('тест')) {
+      allowedToContinue.add(ctx.from.id);
+      // Отвечаем на комментарий с кнопкой
+      try {
+        await ctx.reply(
+          `@${ctx.from.username || ctx.from.first_name}, пройти тест можно по кнопке ниже!`,
+          {
+            reply_to_message_id: ctx.message.message_id,
+            reply_markup: {
+              inline_keyboard: [[{ text: 'Пройти тест', url: 'https://t.me/coachpsyhology' }]]
+            }
+          }
+        );
+      } catch (e) {
+        console.error('Ошибка при ответе на комментарий:', e);
+      }
+    }
+  }
+  await next();
 });
