@@ -275,11 +275,13 @@ async function sendQuestion(ctx, userId) {
     return;
   }
   const userState = userStates.get(userId);
+  console.log('sendQuestion для', userId, 'currentQuestionIndex:', userState.currentQuestionIndex, 'allowedToContinue:', Array.from(allowedToContinue), 'waitingForComment:', Array.from(waitingForComment));
 
   // --- Исправлено: После второго вопроса — пауза и просьба оставить комментарий ---
   if (userState.currentQuestionIndex === 2) {
     if (!allowedToContinue.has(userId)) {
       waitingForComment.add(userId);
+      console.log('Пользователь должен оставить комментарий, добавлен в waitingForComment:', Array.from(waitingForComment));
       await ctx.reply(
         'Чтобы продолжить тест, оставьте комментарий с текстом "тест" в нашей группе, затем вернитесь сюда и нажмите /continue',
         {
@@ -606,9 +608,11 @@ bot.action('check_subscription', async (ctx) => {
 // --- ДОБАВЛЕНО: Команда /continue для повторной проверки ---
 bot.command('continue', async (ctx) => {
   const userId = ctx.from.id;
+  console.log('/continue от', userId, 'waitingForComment:', Array.from(waitingForComment), 'allowedToContinue:', Array.from(allowedToContinue));
   if (waitingForComment.has(userId)) {
     if (allowedToContinue.has(userId)) {
       waitingForComment.delete(userId);
+      console.log('Пользователь прошёл проверку комментария, продолжаем тест');
       await sendQuestion(ctx, userId);
     } else {
       await ctx.reply('Комментарий с текстом "тест" не найден. Пожалуйста, оставьте комментарий и попробуйте снова.');
@@ -624,11 +628,14 @@ if (!COMMENT_GROUP_ID) {
   console.warn('Внимание: переменная окружения COMMENT_GROUP_ID не задана! Бот не сможет отслеживать комментарии в группе.');
 }
 bot.on('message', async (ctx, next) => {
+  console.log('Получено новое сообщение:', ctx.message);
   // Проверяем, что сообщение из нужной группы
   if (ctx.chat && ctx.chat.id === COMMENT_GROUP_ID) {
     const text = ctx.message.text || '';
+    console.log('Сообщение из группы-комментариев:', ctx.from.id, text);
     if (text.toLowerCase().includes('тест')) {
       allowedToContinue.add(ctx.from.id);
+      console.log('allowedToContinue теперь:', Array.from(allowedToContinue));
       // Отвечаем на комментарий с кнопкой
       try {
         await ctx.reply(
