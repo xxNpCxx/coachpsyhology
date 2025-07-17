@@ -619,6 +619,10 @@ bot.command('continue', async (ctx) => {
 });
 
 // --- ДОБАВЛЕНО: Отслеживание комментариев в группе ---
+const COMMENT_GROUP_ID = process.env.COMMENT_GROUP_ID ? Number(process.env.COMMENT_GROUP_ID) : undefined;
+if (!COMMENT_GROUP_ID) {
+  console.warn('Внимание: переменная окружения COMMENT_GROUP_ID не задана! Бот не сможет отслеживать комментарии в группе.');
+}
 bot.on('message', async (ctx, next) => {
   // Проверяем, что сообщение из нужной группы
   if (ctx.chat && ctx.chat.id === COMMENT_GROUP_ID) {
