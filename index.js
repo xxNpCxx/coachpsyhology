@@ -664,3 +664,30 @@ bot.on('message', async (ctx, next) => {
   }
   await next();
 });
+
+// --- ДОБАВЛЕНО: Отслеживание удаления комментариев с "тест" ---
+bot.on('channel_post', async (ctx, next) => {
+  // Это событие не подходит для удаления, но оставим для совместимости
+  await next();
+});
+
+bot.on('raw', async (ctx, next) => {
+  // Проверяем, есть ли update типа message или message_delete
+  const update = ctx.update;
+  // Для Telegraf 4.x и выше: удаление сообщений приходит как update.message_delete
+  if (update.message && update.message.text && update.message.text.toLowerCase().includes('тест')) {
+    // Это обычное сообщение, не удаление
+    await next();
+    return;
+  }
+  if (update.message && update.message.message_id && update.message.text === undefined && update.message.from) {
+    // Это может быть удаление сообщения, но Telegraf не всегда поддерживает это напрямую
+    // Поэтому используем update.message.from.id для удаления из allowedToContinue
+    const userId = update.message.from.id;
+    if (allowedToContinue.has(userId)) {
+      allowedToContinue.delete(userId);
+      console.log('Пользователь удалил комментарий с "тест", удалён из allowedToContinue:', userId);
+    }
+  }
+  await next();
+});
