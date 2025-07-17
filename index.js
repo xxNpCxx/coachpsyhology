@@ -646,7 +646,7 @@ bot.on('message', async (ctx, next) => {
           {
             reply_to_message_id: ctx.message.message_id,
             reply_markup: {
-              inline_keyboard: [[{ text: 'Пройти тест', url: 'https://t.me/coachpsyhology' }]]
+              inline_keyboard: [[{ text: 'Пройти тест', url: 'https://t.me/coach_psychology_bot' }]]
             }
           }
         );
