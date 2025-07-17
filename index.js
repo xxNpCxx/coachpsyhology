@@ -618,7 +618,14 @@ bot.command('continue', async (ctx) => {
       console.log('Пользователь прошёл проверку комментария, продолжаем тест');
       await sendQuestion(ctx, userId);
     } else {
-      await ctx.reply('Комментарий с текстом "тест" не найден. Пожалуйста, оставьте комментарий и попробуйте снова.');
+      await ctx.reply(
+        'Чтобы продолжить тест, сперва оставьте комментарий с текстом "тест" в нашей группе, затем вернитесь сюда и нажмите /continue',
+        {
+          reply_markup: {
+            inline_keyboard: [[{ text: 'Группа для комментария', url: 'https://t.me/+Qw1W75kOlhYyZDEy' }]]
+          }
+        }
+      );
     }
   } else {
     await ctx.reply('Вам не нужно использовать эту команду сейчас.');
