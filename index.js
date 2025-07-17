@@ -6,6 +6,9 @@ const http = require('http');
 const { logEvent } = require('./logger');
 const { trackEvent, setUserOnce } = require('./analytics');
 
+const allowedToContinue = new Set();
+const waitingForComment = new Set();
+
 // Инициализация бота
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
