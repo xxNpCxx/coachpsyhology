@@ -311,7 +311,7 @@ async function sendQuestion(ctx, userId) {
       waitingForComment.add(userId);
       console.log('Пользователь должен оставить комментарий, добавлен в waitingForComment:', Array.from(waitingForComment));
       await ctx.reply(
-        'Чтобы продолжить тест, оставьте комментарий с текстом "тест" в нашей группе, затем вернитесь сюда и нажмите /continue',
+        'Чтобы продолжить тест, оставьте комментарий с текстом "тест" в нашей группе, затем вернитесь сюда и продолжите тест',
         {
           reply_markup: {
             inline_keyboard: [[{ text: 'Группа для комментария', url: process.env.COMMENT_GROUP_LINK }]]
@@ -728,7 +728,8 @@ bot.command('debug_comment', async (ctx) => {
   message += `*Ваш ID:* \`${userId}\`\n`;
   message += `*Ожидает комментарий:* ${isWaiting ? 'Да' : 'Нет'}\n`;
   message += `*Разрешён продолжить:* ${isAllowed ? 'Да' : 'Нет'}\n`;
-  message += `*COMMENT_GROUP_ID:* \`${COMMENT_GROUP_ID || 'Не настроен'}\`\n\n`;
+  message += `*COMMENT_GROUP_ID:* \`${COMMENT_GROUP_ID || 'Не настроен'}\`\n`;
+  message += `*Разрешённые пользователи:* \`[1087968824]\`\n\n`;
   
   if (isWaiting && !isAllowed) {
     message += `💡 *Рекомендации:*\n`;
@@ -773,16 +774,25 @@ bot.on('message', async (ctx, next) => {
     const userId = ctx.from?.id;
     
     // Проверяем, что это реальный пользователь, а не бот или системное сообщение
+    // Исключение: разрешаем продолжение для определённых пользователей даже если они помечены как бот
+    const allowedUsers = [1087968824]; // Добавьте сюда ваш ID если нужно
+    
     if (userId && 
         userId !== 777000 && 
-        !ctx.from.is_bot && 
+        (!ctx.from.is_bot || allowedUsers.includes(userId)) && 
         !ctx.message.is_automatic_forward && 
         text.toLowerCase().includes('тест')) {
       console.log('✅ Сообщение из группы-комментариев от пользователя:', userId, text);
       allowedToContinue.add(userId);
       console.log('✅ allowedToContinue теперь:', Array.from(allowedToContinue));
     } else {
-      console.log('❌ Сообщение из группы-комментариев (игнорируется):', userId, text, 'is_bot:', ctx.from?.is_bot, 'forward:', ctx.message.is_automatic_forward);
+      const reason = [];
+      if (userId === 777000) reason.push('Telegram service');
+      if (ctx.from?.is_bot && !allowedUsers.includes(userId)) reason.push('bot account');
+      if (ctx.message.is_automatic_forward) reason.push('automatic forward');
+      if (!text.toLowerCase().includes('тест')) reason.push('no "тест" keyword');
+      
+      console.log('❌ Сообщение из группы-комментариев (игнорируется):', userId, text, 'Причина:', reason.join(', '));
     }
   } else if (ctx.chat) {
     console.log('📨 Сообщение из другой группы:', ctx.chat.id, 'настроена группа:', COMMENT_GROUP_ID);
