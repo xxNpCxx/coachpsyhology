@@ -716,16 +716,59 @@ bot.action('confirm_comment', async (ctx) => {
   }
 });
 
+// Команда для отладки системы комментариев
+bot.command('debug_comment', async (ctx) => {
+  const userId = ctx.from.id;
+  console.log('🔍 Отладка системы комментариев для пользователя:', userId);
+  
+  const isWaiting = waitingForComment.has(userId);
+  const isAllowed = allowedToContinue.has(userId);
+  
+  let message = `🔍 *Отладка системы комментариев*\n\n`;
+  message += `*Ваш ID:* \`${userId}\`\n`;
+  message += `*Ожидает комментарий:* ${isWaiting ? 'Да' : 'Нет'}\n`;
+  message += `*Разрешён продолжить:* ${isAllowed ? 'Да' : 'Нет'}\n`;
+  message += `*COMMENT_GROUP_ID:* \`${COMMENT_GROUP_ID || 'Не настроен'}\`\n\n`;
+  
+  if (isWaiting && !isAllowed) {
+    message += `💡 *Рекомендации:*\n`;
+    message += `1. Оставьте комментарий "тест" в группе\n`;
+    message += `2. Или нажмите кнопку "Я оставил комментарий"\n`;
+    message += `3. Или используйте команду /force_continue`;
+  }
+  
+  await ctx.reply(message, { parse_mode: 'Markdown' });
+});
+
+// Команда для принудительного продолжения (для отладки)
+bot.command('force_continue', async (ctx) => {
+  const userId = ctx.from.id;
+  console.log('🚀 Принудительное продолжение для пользователя:', userId);
+  
+  if (waitingForComment.has(userId)) {
+    allowedToContinue.add(userId);
+    waitingForComment.delete(userId);
+    
+    await ctx.reply('🚀 Принудительное продолжение активировано!');
+    console.log('Пользователь принудительно продолжает тест');
+    await sendQuestion(ctx, userId);
+  } else {
+    await ctx.reply('❌ Вам не нужно принудительное продолжение');
+  }
+});
+
 // --- ДОБАВЛЕНО: Отслеживание комментариев в группе ---
 const COMMENT_GROUP_ID = process.env.COMMENT_GROUP_ID ? Number(process.env.COMMENT_GROUP_ID) : undefined;
 if (!COMMENT_GROUP_ID) {
   console.warn('Внимание: переменная окружения COMMENT_GROUP_ID не задана! Бот не сможет отслеживать комментарии в группе.');
+} else {
+  console.log('✅ COMMENT_GROUP_ID настроен:', COMMENT_GROUP_ID);
 }
 
 bot.on('message', async (ctx, next) => {
-  console.log('Получено новое сообщение:', ctx.message);
   // Проверяем, что сообщение из нужной группы
   if (ctx.chat && ctx.chat.id === COMMENT_GROUP_ID) {
+    console.log('📨 Сообщение из целевой группы:', ctx.chat.id, 'от пользователя:', ctx.from?.id);
     const text = ctx.message.text || '';
     const userId = ctx.from?.id;
     
@@ -735,12 +778,14 @@ bot.on('message', async (ctx, next) => {
         !ctx.from.is_bot && 
         !ctx.message.is_automatic_forward && 
         text.toLowerCase().includes('тест')) {
-      console.log('Сообщение из группы-комментариев от пользователя:', userId, text);
+      console.log('✅ Сообщение из группы-комментариев от пользователя:', userId, text);
       allowedToContinue.add(userId);
-      console.log('allowedToContinue теперь:', Array.from(allowedToContinue));
+      console.log('✅ allowedToContinue теперь:', Array.from(allowedToContinue));
     } else {
-      console.log('Сообщение из группы-комментариев (игнорируется):', userId, text, 'is_bot:', ctx.from?.is_bot, 'forward:', ctx.message.is_automatic_forward);
+      console.log('❌ Сообщение из группы-комментариев (игнорируется):', userId, text, 'is_bot:', ctx.from?.is_bot, 'forward:', ctx.message.is_automatic_forward);
     }
+  } else if (ctx.chat) {
+    console.log('📨 Сообщение из другой группы:', ctx.chat.id, 'настроена группа:', COMMENT_GROUP_ID);
   }
   await next();
 });
