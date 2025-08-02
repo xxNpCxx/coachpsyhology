@@ -4,11 +4,17 @@
   "description": "Telegram bot for archetype personality test",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "migrate": "node migrations/migrate.js"
   },
   "dependencies": {
     "dotenv": "16.3.1",
-    "telegraf": "4.12.2"
+    "telegraf": "4.12.2",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
   },
   "keywords": [
     "telegram",

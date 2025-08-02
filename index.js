@@ -6,11 +6,19 @@ const http = require('http');
 const { logEvent } = require('./logger');
 const { trackEvent, setUserOnce } = require('./analytics');
 
+// Импорты для админ-панели
+const userService = require('./services/userService');
+const testResultService = require('./services/testResultService');
+const AdminPanelHandler = require('./handlers/adminPanel');
+
 const allowedToContinue = new Set();
 const waitingForComment = new Set();
 
 // Инициализация бота
 const bot = new Telegraf(process.env.BOT_TOKEN);
+
+// Инициализация админ-панели
+const adminPanel = new AdminPanelHandler(bot);
 
 // Загрузка вопросов из JSON файла
 const archetypesData = JSON.parse(fs.readFileSync('./questions.json', 'utf8'));
@@ -224,6 +232,20 @@ function getReplyStartKeyboard() {
 // Обработка команды /start
 bot.command('start', async (ctx) => {
   const userId = ctx.from.id;
+  
+  // Сохраняем пользователя в базу данных
+  try {
+    await userService.upsertUser({
+      telegram_id: userId,
+      username: ctx.from.username,
+      first_name: ctx.from.first_name,
+      last_name: ctx.from.last_name,
+      language_code: ctx.from.language_code
+    });
+  } catch (error) {
+    console.error('❌ Ошибка сохранения пользователя в БД:', error);
+  }
+  
   // Сохраняем пользователя в Mixpanel (people.set_once)
   setUserOnce(userId, {
     username: ctx.from.username,
@@ -467,6 +489,14 @@ async function showResults(ctx, userId) {
     await ctx.replyWithMediaGroup(documents);
   }
 
+  // Сохраняем результаты в базу данных
+  try {
+    await testResultService.saveTestResults(userId, userState.archetypeScores);
+    await testResultService.saveQuestionAnswers(userId, userState.answers);
+  } catch (error) {
+    console.error('❌ Ошибка сохранения результатов в БД:', error);
+  }
+
   // Очищаем состояние пользователя
   userStates.delete(userId);
   allowedToContinue.delete(userId); // сбрасываем разрешение
@@ -511,6 +541,17 @@ bot.use(async (ctx, next) => {
   await next();
   const ms = new Date() - start;
   console.log('Response time: %sms', ms);
+});
+
+// Middleware для обработки текстовых сообщений в админ-панели
+bot.use(async (ctx, next) => {
+  if (ctx.message && ctx.message.text && !ctx.message.text.startsWith('/')) {
+    const handled = await adminPanel.handleTextMessage(ctx);
+    if (handled) {
+      return; // Сообщение обработано админ-панелью
+    }
+  }
+  await next();
 });
 
 // Запуск HTTP сервера

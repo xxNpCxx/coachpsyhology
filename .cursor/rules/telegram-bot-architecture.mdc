@@ -1,0 +1,390 @@
+---
+alwaysApply: true
+---
+# 🤖 Архитектура Telegram Bot - Node.js + Telegraf
+
+## 🏗️ ОБЯЗАТЕЛЬНАЯ СТРУКТУРА ПРОЕКТА
+
+```
+project/
+├── src/
+│   ├── bot.js                 # Точка входа, middleware pipeline
+│   ├── config.js              # Конфигурация и переменные окружения
+│   ├── commands/              # Команды бота (/start, /help)
+│   │   └── start.js
+│   ├── scenes/                # FSM сцены для диалогов
+│   │   └── buy.scene.js
+│   ├── handlers/              # Обработчики событий
+│   │   └── menu.js
+│   ├── actions/               # Бизнес-логика кнопок
+│   │   └── userActions.js
+│   ├── pg/                    # Слой работы с БД
+│   │   └── users.pg.js
+│   ├── utils/                 # Утилиты
+│   │   ├── logger.js
+│   │   └── settings.pg.js
+│   └── keyboards.js           # UI компоненты
+├── migrations/                # SQL миграции
+│   └── 001_create_users.sql
+├── tests/                     # Тесты
+│   ├── unit/
+│   └── integration/
+├── package.json
+├── eslint.config.js
+└── jest.config.js
+```
+
+## 🔧 ТОЧКА ВХОДА (bot.js)
+
+### ОБЯЗАТЕЛЬНЫЙ ПОРЯДОК ИНИЦИАЛИЗАЦИИ:
+
+```javascript
+import { Telegraf, session, Scenes } from "telegraf";
+import express from "express";
+
+// 1. Импорты конфигурации
+import { BOT_TOKEN, pool } from "./config.js";
+
+// 2. Импорты команд
+import { registerStartCommand } from "./commands/start.js";
+
+// 3. Импорты сцен
+import { buyScene } from "./scenes/buy.scene.js";
+
+// 4. Импорты обработчиков
+import { registerMenuHandlers } from "./handlers/menu.js";
+
+// 5. Инициализация бота
+const bot = new Telegraf(BOT_TOKEN);
+
+// 6. КРИТИЧЕСКИЙ ПОРЯДОК MIDDLEWARE:
+bot.use(session({ defaultSession: () => ({}) }));
+bot.use(globalMiddleware);  // Логирование, валидация
+bot.use(stage.middleware()); // FSM сцены ПОСЛЕ session
+
+// 7. Регистрация компонентов
+registerStartCommand(bot, handleStart);
+const stage = new Scenes.Stage([buyScene]);
+
+// 8. Webhook + Express
+const app = express();
+app.use(`/${BOT_TOKEN}`, (req, res) => {
+  bot.handleUpdate(req.body, res);
+});
+```
+
+## 📝 ПАТТЕРН РЕГИСТРАЦИИ КОМАНД
+
+### ✅ ПРАВИЛЬНО - Функция регистрации:
+```javascript
+// commands/start.js
+export function registerStartCommand(bot, handleStart) {
+  bot.start(async (ctx) => {
+    await handleStart(ctx);
+  });
+  
+  bot.command("start", async (ctx) => {
+    await handleStart(ctx);
+  });
+}
+```
+
+### ❌ НЕПРАВИЛЬНО - Прямая привязка:
+```javascript
+// НЕ ДЕЛАЙ ТАК!
+bot.command('start', async (ctx) => {
+  // логика прямо здесь
+});
+```
+
+## 🎭 FSM СЦЕНЫ (Finite State Machine)
+
+### Структура сцены:
+```javascript
+// scenes/buy.scene.js
+import { Scenes } from "telegraf";
+
+export const buyScene = new Scenes.BaseScene("buy");
+
+// Вход в сцену
+buyScene.enter(async (ctx) => {
+  const data = ctx.callbackQuery?.data;
+  // Инициализация состояния
+  ctx.session.buy = { currency: data.split('_')[1] };
+  await ctx.reply("Введите сумму:");
+});
+
+// Обработка текста
+buyScene.on('text', async (ctx) => {
+  const amount = parseFloat(ctx.message.text);
+  if (isNaN(amount)) {
+    await ctx.reply("❌ Некорректная сумма");
+    return;
+  }
+  // Переход к следующему шагу
+  ctx.session.buy.amount = amount;
+  await ctx.reply("Введите адрес кошелька:");
+});
+
+// Обработка кнопок
+buyScene.action('cancel', async (ctx) => {
+  await ctx.scene.leave();
+  await sendMainMenu(ctx);
+});
+
+// Выход из сцены
+buyScene.leave(async (ctx) => {
+  delete ctx.session.buy;
+});
+```
+
+## 🎯 ОБРАБОТЧИКИ СОБЫТИЙ
+
+### Паттерн регистрации handlers:
+```javascript
+// handlers/menu.js
+export function registerMenuHandlers(bot, stage) {
+  // Inline кнопки
+  bot.action('buy_BTC', async (ctx) => {
+    await ctx.scene.enter('buy');
+  });
+  
+  // Текстовые команды
+  bot.hears('💰 Мои сделки', async (ctx) => {
+    await handleMyDeals(ctx);
+  });
+}
+```
+
+## 🗄️ РАБОТА С БАЗОЙ ДАННЫХ
+
+### Слой pg/ - изолированные функции:
+```javascript
+// pg/users.pg.js
+import { pool } from '../config.js';
+
+export async function upsertUser(ctx) {
+  const u = ctx.from;
+  try {
+    const result = await pool.query(
+      `INSERT INTO users (telegram_id, username, first_name)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (telegram_id) DO UPDATE
+       SET username = EXCLUDED.username`,
+      [u.id, u.username, u.first_name]
+    );
+    return result.rows[0];
+  } catch (err) {
+    console.error('[users][pg] Ошибка:', err);
+    throw err;
+  }
+}
+```
+
+### СИСТЕМА МИГРАЦИЙ:
+```javascript
+// migrate.js
+async function runMigrations() {
+  await ensureMigrationsTable();
+  const applied = await getAppliedMigrations();
+  
+  const files = fs.readdirSync('migrations')
+    .filter(f => f.endsWith('.sql'))
+    .sort();
+    
+  for (const file of files) {
+    if (!applied.has(file)) {
+      const sql = fs.readFileSync(`migrations/${file}`, 'utf8');
+      await applyMigration(file, sql);
+    }
+  }
+}
+```
+
+## ⚙️ КОНФИГУРАЦИЯ
+
+### config.js - центральная конфигурация:
+```javascript
+import dotenv from 'dotenv';
+import { Pool } from 'pg';
+
+dotenv.config();
+
+export const BOT_TOKEN = process.env.BOT_TOKEN;
+export const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
+
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? 
+    { rejectUnauthorized: false } : false
+});
+```
+
+## 🖥️ UI КОМПОНЕНТЫ (Клавиатуры)
+
+### Чистые функции для UI:
+```javascript
+// keyboards.js
+import { Markup } from 'telegraf';
+
+export function buildMainInlineMenuRows(currencies) {
+  const buyRows = Object.keys(currencies).map(cur => 
+    [{ text: `💸 Купить ${cur}`, callback_data: `buy_${cur}` }]
+  );
+  return [
+    ...buyRows,
+    [{ text: '💰 Мои сделки', callback_data: 'my_deals' }],
+  ];
+}
+
+export function mainInlineMenu() {
+  const rows = buildMainInlineMenuRows(CURRENCIES);
+  return Markup.inlineKeyboard(rows);
+}
+```
+
+## 📊 СИСТЕМА ЛОГИРОВАНИЯ
+
+### Гибкая система через env переменные:
+```javascript
+// utils/logger.js
+const isLogEnabled = (logType) => process.env[logType] === "true";
+
+export const logger = {
+  debug: (...args) => {
+    if (isLogEnabled('DEBUG_LOGS')) {
+      console.log('[DEBUG]', ...args);
+    }
+  },
+  error: (...args) => console.error('❌ [ERROR]', ...args),
+  info: (...args) => console.log('✅ [INFO]', ...args),
+};
+
+// Использование:
+// DEBUG_LOGS=true - основные логи
+// MEGA_LOGS=true - детальная отладка
+// FSM_LOGS=true - логи сцен
+```
+
+## 🔒 БЕЗОПАСНОСТЬ
+
+### 1. Параметризованные запросы:
+```javascript
+// ✅ Правильно
+await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+
+// ❌ Неправильно
+await pool.query(`SELECT * FROM users WHERE id = ${userId}`);
+```
+
+### 2. Проверка ролей:
+```javascript
+export async function checkRole(userId, role) {
+  const result = await pool.query(
+    'SELECT value FROM settings WHERE key = $1',
+    [`${role}_users`]
+  );
+  const users = JSON.parse(result.rows[0]?.value || '[]');
+  return users.includes(userId);
+}
+```
+
+### 3. Валидация данных:
+```javascript
+export function validateAmount(amount) {
+  const num = parseFloat(amount);
+  if (isNaN(num) || num <= 0) {
+    throw new Error('Некорректная сумма');
+  }
+  return num;
+}
+```
+
+## 🧪 ТЕСТИРОВАНИЕ
+
+### Jest конфигурация:
+```javascript
+// jest.config.js
+export default {
+  testEnvironment: 'node',
+  transform: {},
+  testMatch: ["**/tests/**/*.test.mjs"],
+};
+```
+
+### Unit тест пример:
+```javascript
+// tests/unit/keyboards.test.mjs
+import { buildMainInlineMenuRows } from '../../src/keyboards.js';
+
+test('должен создать правильную структуру меню', () => {
+  const currencies = { BTC: 'bitcoin' };
+  const rows = buildMainInlineMenuRows(currencies);
+  
+  expect(rows[0][0]).toEqual({
+    text: '💸 Купить BTC',
+    callback_data: 'buy_BTC'
+  });
+});
+```
+
+## 📦 PACKAGE.JSON
+
+### Обязательные скрипты:
+```json
+{
+  "type": "module",
+  "scripts": {
+    "start": "node src/bot.js",
+    "dev": "nodemon src/bot.js",
+    "migrate": "node src/migrate.js",
+    "test": "jest",
+    "test:unit": "jest tests/unit/",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+```
+
+## 🚫 ЗАПРЕЩЕНО
+
+1. **Смешивание inline и reply клавиатур в одном сообщении**
+2. **Множественные обработчики одной команды**
+3. **Прямое использование SQL без параметров**
+4. **Хардкод токенов и ID в коде**
+5. **Middleware после stage.middleware() для FSM**
+6. **Игнорирование ошибок без логирования**
+
+## ✅ ОБЯЗАТЕЛЬНО
+
+1. **Session middleware ПЕРЕД stage.middleware()**
+2. **Функции регистрации для всех компонентов**
+3. **Изолированный слой работы с БД (pg/)**
+4. **Система миграций для БД**
+5. **Логирование всех ошибок**
+6. **Валидация входных данных**
+7. **Health check endpoint**
+
+## 🎯 ЧЕКЛИСТ НОВОГО ПРОЕКТА
+
+- [ ] Создана структура папок по шаблону
+- [ ] Настроен config.js с переменными окружения
+- [ ] Созданы функции регистрации команд
+- [ ] Настроен middleware pipeline в правильном порядке
+- [ ] Созданы FSM сцены для диалогов
+- [ ] Настроена система миграций БД
+- [ ] Добавлены unit тесты
+- [ ] Настроен ESLint
+- [ ] Добавлена система логирования
+- [ ] Создан health check endpoint
+
+---
+
+**Эта архитектура обеспечивает масштабируемость, тестируемость и production-готовность вашего Telegram бота!**
+description:
+globs:
+alwaysApply: false
+---
