@@ -56,19 +56,36 @@ async function runMigrations() {
     
     console.log(`📁 Найдено ${files.length} SQL файлов миграций`);
     
+    let appliedCount = 0;
     for (const file of files) {
       if (!applied.has(file)) {
         console.log(`📄 Применение миграции: ${file}`);
         const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
         await applyMigration(file, sql);
+        appliedCount++;
       } else {
         console.log(`⏭️ Миграция ${file} уже применена`);
       }
     }
     
-    console.log('✅ Все миграции выполнены');
+    if (appliedCount > 0) {
+      console.log(`✅ Применено ${appliedCount} новых миграций`);
+    } else {
+      console.log('✅ Все миграции уже применены');
+    }
   } catch (error) {
     console.error('❌ Ошибка выполнения миграций:', error);
+    throw error; // Пробрасываем ошибку вместо завершения процесса
+  }
+}
+
+// Функция для запуска миграций из командной строки
+async function runMigrationsAndExit() {
+  try {
+    await runMigrations();
+    console.log('🎉 Миграции завершены успешно');
+  } catch (error) {
+    console.error('❌ Миграции завершились с ошибкой');
     process.exit(1);
   } finally {
     await pool.end();
@@ -77,7 +94,7 @@ async function runMigrations() {
 
 // Запуск миграций
 if (require.main === module) {
-  runMigrations();
+  runMigrationsAndExit();
 }
 
 module.exports = { runMigrations }; 

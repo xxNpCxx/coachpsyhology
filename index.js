@@ -11,6 +11,9 @@ const userService = require('./services/userService');
 const testResultService = require('./services/testResultService');
 const AdminPanelHandler = require('./handlers/adminPanel');
 
+// Импорт системы миграций
+const { runMigrations } = require('./migrations/migrate');
+
 const allowedToContinue = new Set();
 const waitingForComment = new Set();
 
@@ -562,6 +565,22 @@ server.listen(PORT, async () => {
   console.log(`📈 Status: http://localhost:${PORT}/status`);
   console.log(`🔗 Webhook: http://localhost:${PORT}/webhook`);
   console.log(`⚙️ Set webhook: http://localhost:${PORT}/set-webhook`);
+
+  // Автоматическое применение миграций при запуске
+  if (process.env.DATABASE_URL) {
+    try {
+      console.log('🔄 Применение миграций базы данных...');
+      await runMigrations();
+      console.log('✅ Миграции применены успешно');
+    } catch (error) {
+      console.error('❌ Ошибка применения миграций:', error.message);
+      console.log('⚠️ Бот продолжит работу, но некоторые функции могут быть недоступны');
+      console.log('💡 Проверьте настройки DATABASE_URL в переменных окружения');
+    }
+  } else {
+    console.log('⚠️ DATABASE_URL не настроен, миграции пропущены');
+    console.log('💡 Для работы админ-панели настройте DATABASE_URL в .env файле');
+  }
 
   // Автоматическая установка webhook при запуске (если есть домен)
   if (process.env.WEBHOOK_URL) {

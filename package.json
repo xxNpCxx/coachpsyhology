@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "migrate": "node migrations/migrate.js"
+    "migrate": "node migrations/migrate.js",
+    "test-db": "node scripts/test-db.js",
+    "migration-status": "node scripts/migration-status.js"
   },
   "dependencies": {
     "dotenv": "16.3.1",
