@@ -678,11 +678,17 @@ bot.command('continue', async (ctx) => {
       console.log('Пользователь прошёл проверку комментария, продолжаем тест');
       await sendQuestion(ctx, userId);
     } else {
+      // Добавляем альтернативный способ - ручное подтверждение
       await ctx.reply(
-        'Чтобы продолжить тест, сперва оставьте комментарий с текстом "тест" в нашей группе, затем вернитесь сюда и нажмите /continue',
+        'Чтобы продолжить тест, выполните одно из действий:\n\n' +
+        '1️⃣ Оставьте комментарий с текстом "тест" в нашей группе\n' +
+        '2️⃣ Или нажмите кнопку "Я оставил комментарий"',
         {
           reply_markup: {
-            inline_keyboard: [[{ text: 'Группа для комментария', url: process.env.COMMENT_GROUP_LINK }]]
+            inline_keyboard: [
+              [{ text: 'Группа для комментария', url: process.env.COMMENT_GROUP_LINK }],
+              [{ text: 'Я оставил комментарий', callback_data: 'confirm_comment' }]
+            ]
           }
         }
       );
@@ -692,21 +698,48 @@ bot.command('continue', async (ctx) => {
   }
 });
 
+// Обработка подтверждения комментария
+bot.action('confirm_comment', async (ctx) => {
+  const userId = ctx.from.id;
+  console.log('Подтверждение комментария от пользователя:', userId);
+  
+  if (waitingForComment.has(userId)) {
+    // Добавляем пользователя в список разрешённых
+    allowedToContinue.add(userId);
+    waitingForComment.delete(userId);
+    
+    await ctx.answerCbQuery('✅ Комментарий подтверждён!');
+    console.log('Пользователь подтвердил комментарий, продолжаем тест');
+    await sendQuestion(ctx, userId);
+  } else {
+    await ctx.answerCbQuery('❌ Вам не нужно подтверждать комментарий сейчас');
+  }
+});
+
 // --- ДОБАВЛЕНО: Отслеживание комментариев в группе ---
 const COMMENT_GROUP_ID = process.env.COMMENT_GROUP_ID ? Number(process.env.COMMENT_GROUP_ID) : undefined;
 if (!COMMENT_GROUP_ID) {
   console.warn('Внимание: переменная окружения COMMENT_GROUP_ID не задана! Бот не сможет отслеживать комментарии в группе.');
 }
+
 bot.on('message', async (ctx, next) => {
   console.log('Получено новое сообщение:', ctx.message);
   // Проверяем, что сообщение из нужной группы
   if (ctx.chat && ctx.chat.id === COMMENT_GROUP_ID) {
     const text = ctx.message.text || '';
-    console.log('Сообщение из группы-комментариев:', ctx.from.id, text);
-    if (text.toLowerCase().includes('тест')) {
-      allowedToContinue.add(ctx.from.id);
+    const userId = ctx.from?.id;
+    
+    // Проверяем, что это реальный пользователь, а не бот или системное сообщение
+    if (userId && 
+        userId !== 777000 && 
+        !ctx.from.is_bot && 
+        !ctx.message.is_automatic_forward && 
+        text.toLowerCase().includes('тест')) {
+      console.log('Сообщение из группы-комментариев от пользователя:', userId, text);
+      allowedToContinue.add(userId);
       console.log('allowedToContinue теперь:', Array.from(allowedToContinue));
-      // Больше не отвечаем на комментарий
+    } else {
+      console.log('Сообщение из группы-комментариев (игнорируется):', userId, text, 'is_bot:', ctx.from?.is_bot, 'forward:', ctx.message.is_automatic_forward);
     }
   }
   await next();
