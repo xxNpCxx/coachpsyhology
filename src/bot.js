@@ -17,8 +17,8 @@ import { registerGlobalHandlers } from "./handlers/globalHandlers.js";
 // 5. Импорты утилит
 import { cache } from "./utils/cache.js";
 
-// 6. Импорт админ-панели (из архива, временно)
-import { AdminPanelHandler } from "../old/handlers/adminPanel.js";
+// 6. Импорт админ-панели
+import { AdminPanelHandler } from "./handlers/admin/adminPanel.js";
 
 // 7. Инициализация бота
 const bot = new Telegraf(BOT_TOKEN);
