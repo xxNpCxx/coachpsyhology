@@ -792,6 +792,49 @@ bot.command('force_continue', async (ctx) => {
   }
 });
 
+// Простейший тест клавиатуры
+bot.command('simple_test', async (ctx) => {
+  const userId = ctx.from.id;
+  
+  if (!isOwner(userId)) {
+    await ctx.reply('❌ Эта команда доступна только владельцу бота.');
+    return;
+  }
+  
+  console.log('🚀 SIMPLE TEST: Отправляем простую inline кнопку');
+  
+  await ctx.reply('🚀 ПРОСТОЙ ТЕСТ: Вот inline кнопка', {
+    reply_markup: {
+      inline_keyboard: [[
+        { text: '🎯 ТЕСТ', callback_data: 'simple_test_button' }
+      ]]
+    }
+  });
+  
+  console.log('✅ SIMPLE TEST: inline кнопка отправлена');
+  
+  await ctx.reply('🚀 ПРОСТОЙ ТЕСТ: Вот reply кнопка', {
+    reply_markup: {
+      keyboard: [['🎯 ТЕСТ REPLY']],
+      resize_keyboard: true
+    }
+  });
+  
+  console.log('✅ SIMPLE TEST: reply кнопка отправлена');
+});
+
+// Обработчик простой кнопки
+bot.action('simple_test_button', async (ctx) => {
+  console.log('🎯 SIMPLE TEST: Inline кнопка нажата!');
+  await ctx.answerCbQuery('🎯 Inline кнопка работает!');
+  await ctx.reply('✅ INLINE КНОПКА СРАБОТАЛА!');
+});
+
+bot.hears('🎯 ТЕСТ REPLY', async (ctx) => {
+  console.log('🎯 SIMPLE TEST: Reply кнопка нажата!');
+  await ctx.reply('✅ REPLY КНОПКА СРАБОТАЛА!');
+});
+
 // Команда для определения вашего Telegram ID
 bot.command('my_id', async (ctx) => {
   const userId = ctx.from.id;
