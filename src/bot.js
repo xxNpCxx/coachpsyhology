@@ -102,8 +102,13 @@ async function startBot() {
     if (process.env.NODE_ENV === 'production') {
       // Production: webhook mode
       if (WEBHOOK_URL) {
+        // Сначала удаляем старый webhook
+        await bot.telegram.deleteWebhook();
+        console.log('🗑️ Старый webhook удален');
+        
+        // Устанавливаем новый webhook
         await bot.telegram.setWebhook(`${WEBHOOK_URL}`);
-        console.log('🌐 Webhook установлен:', `${WEBHOOK_URL}`);
+        console.log('🌐 Новый webhook установлен:', `${WEBHOOK_URL}`);
       }
       
       app.listen(PORT, '0.0.0.0', () => {
