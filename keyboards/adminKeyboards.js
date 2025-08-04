@@ -1,12 +1,30 @@
 const { Markup } = require('telegraf');
 
-// Главное меню админ-панели
+// Главное меню админ-панели (reply клавиатура)
 function getAdminMainKeyboard() {
   return Markup.keyboard([
     ['👥 Список пользователей', '📊 Статистика'],
     ['🔍 Поиск пользователя', '📨 Отправить сообщение'],
     ['⚙️ Настройки', '🔙 Главное меню']
   ]).resize();
+}
+
+// Главное меню админ-панели (inline клавиатура)
+function getAdminMainInlineKeyboard() {
+  return Markup.inlineKeyboard([
+    [
+      Markup.button.callback('👥 Список пользователей', 'admin_users_list'),
+      Markup.button.callback('📊 Статистика', 'admin_stats')
+    ],
+    [
+      Markup.button.callback('🔍 Поиск пользователя', 'admin_search'),
+      Markup.button.callback('📨 Отправить сообщение', 'admin_send_message')
+    ],
+    [
+      Markup.button.callback('⚙️ Настройки', 'admin_settings'),
+      Markup.button.callback('🔙 Главное меню', 'admin_back_to_main')
+    ]
+  ]);
 }
 
 // Клавиатура для списка пользователей
@@ -137,6 +155,7 @@ function getUserActionsInlineKeyboard(userId) {
 
 module.exports = {
   getAdminMainKeyboard,
+  getAdminMainInlineKeyboard,
   getUsersListKeyboard,
   getStatsKeyboard,
   getSearchKeyboard,

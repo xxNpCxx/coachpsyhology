@@ -2,6 +2,7 @@ const userService = require('../services/userService');
 const testResultService = require('../services/testResultService');
 const {
   getAdminMainKeyboard,
+  getAdminMainInlineKeyboard,
   getUsersListKeyboard,
   getStatsKeyboard,
   getSearchKeyboard,
@@ -25,8 +26,9 @@ class AdminPanelHandler {
   }
 
   setupHandlers() {
-    // Команда для входа в админ-панель
+    // Команды для входа в админ-панель
     this.bot.command('admin', this.handleAdminCommand.bind(this));
+    this.bot.command('admin_inline', this.handleAdminInlineCommand.bind(this));
     
     // Обработчики текстовых команд админ-панели
     this.bot.hears('👥 Список пользователей', this.handleUsersList.bind(this));
@@ -37,7 +39,18 @@ class AdminPanelHandler {
     this.bot.hears('🔙 Главное меню', this.handleBackToMain.bind(this));
     this.bot.hears('🔙 Назад в админ-панель', this.handleBackToAdmin.bind(this));
     
-    // Обработчики inline кнопок
+    // Обработчики выбора интерфейса
+    this.bot.action('admin_interface_inline', this.handleInlineInterface.bind(this));
+    this.bot.action('admin_interface_reply', this.handleReplyInterface.bind(this));
+    
+    // Обработчики inline кнопок главного меню
+    this.bot.action('admin_stats', this.handleStats.bind(this));
+    this.bot.action('admin_search', this.handleSearch.bind(this));
+    this.bot.action('admin_send_message', this.handleSendMessage.bind(this));
+    this.bot.action('admin_settings', this.handleSettings.bind(this));
+    this.bot.action('admin_back_to_main', this.handleBackToMain.bind(this));
+    
+    // Обработчики inline кнопок пользователей
     this.bot.action(/admin_user_profile_(\d+)/, this.handleUserProfile.bind(this));
     this.bot.action(/admin_user_results_(\d+)/, this.handleUserResults.bind(this));
     this.bot.action(/admin_user_message_(\d+)/, this.handleUserMessage.bind(this));
@@ -604,6 +617,56 @@ class AdminPanelHandler {
       // Сбрасываем состояние
       adminStates.set(userId, { currentSection: 'main' });
     }
+  }
+
+  // Обработка выбора inline интерфейса
+  async handleInlineInterface(ctx) {
+    if (!(await this.checkAdminRights(ctx))) return;
+    
+    await ctx.answerCbQuery();
+    await ctx.editMessageText(
+      '🔐 *Панель администратора*\n\nВыберите действие:',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: getAdminMainInlineKeyboard()
+      }
+    );
+  }
+
+  // Обработка выбора reply интерфейса
+  async handleReplyInterface(ctx) {
+    if (!(await this.checkAdminRights(ctx))) return;
+    
+    await ctx.answerCbQuery();
+    await ctx.reply(
+      '🔐 *Панель администратора*\n\nВыберите действие:',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: getAdminMainKeyboard()
+      }
+    );
+  }
+
+  // Обработка команды /admin_inline
+  async handleAdminInlineCommand(ctx) {
+    console.log('🔐 Обработка команды /admin_inline от пользователя:', ctx.from.id);
+    
+    if (!(await this.checkAdminRights(ctx))) {
+      console.log('❌ Проверка прав не пройдена, выходим');
+      return;
+    }
+
+    const userId = ctx.from.id;
+    adminStates.set(userId, { currentSection: 'main' });
+    console.log('✅ Открываем inline админ-панель для пользователя:', userId);
+
+    await ctx.reply(
+      '🔐 *Панель администратора (Inline)*\n\nВыберите действие:',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: getAdminMainInlineKeyboard()
+      }
+    );
   }
 }
 
