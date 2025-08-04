@@ -484,7 +484,7 @@ async function showResults(ctx, userId) {
 
   let resultMessage = `✅ РЕЗУЛЬТАТЫ 
 
-4 наиболее выраженных архетипа:`;
+4 наиболее выраженных архетипа:\n`;
 
   // Сумма баллов топ-4 архетипов
   const topSum = sortedArchetypes.reduce((acc, [_, score]) => acc + score, 0) || 1;
