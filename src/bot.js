@@ -89,7 +89,13 @@ app.get('/', (req, res) => {
 
 // Webhook endpoint
 app.post(`/webhook`, (req, res) => {
+  console.log('📨 Получен webhook запрос');
   bot.handleUpdate(req.body, res);
+});
+
+// Health check для Render
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // 12. Запуск бота
