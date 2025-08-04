@@ -1,20 +1,6 @@
-const userService = require('../services/userService');
-const testResultService = require('../services/testResultService');
-const {
-  getAdminMainKeyboard,
-  getAdminMainInlineKeyboard,
-  getUsersListKeyboard,
-  getStatsKeyboard,
-  getSearchKeyboard,
-  getMessageKeyboard,
-  getSettingsKeyboard,
-  getUserProfileKeyboard,
-  getConfirmationKeyboard,
-  getArchetypesKeyboard,
-  getPeriodKeyboard,
-  getPaginationInlineKeyboard,
-  getUserActionsInlineKeyboard
-} = require('../keyboards/adminKeyboards');
+// Импорты заменены на заглушки - админ-панель будет переписана
+// import { userService } from '../services/userService.js';
+// import { testResultService } from '../services/testResultService.js';
 
 // Состояние админ-панели для каждого пользователя
 const adminStates = new Map();
@@ -723,4 +709,4 @@ class AdminPanelHandler {
   }
 }
 
-module.exports = AdminPanelHandler; 
+export { AdminPanelHandler }; 

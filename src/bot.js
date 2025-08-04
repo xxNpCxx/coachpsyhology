@@ -17,8 +17,8 @@ import { registerGlobalHandlers } from "./handlers/globalHandlers.js";
 // 5. Импорты утилит
 import { cache } from "./utils/cache.js";
 
-// 6. Импорт админ-панели
-import { AdminPanelHandler } from "./handlers/admin/adminPanel.js";
+// 6. Импорт админ-панели (временно отключена)
+// import { AdminPanelHandler } from "./handlers/admin/adminPanel.js";
 
 // 7. Инициализация бота
 const bot = new Telegraf(BOT_TOKEN);
@@ -51,17 +51,15 @@ bot.use(stage.middleware());
 
 // 9. Регистрация компонентов
 
-// Функция для получения состояния пользователя (для админ-панели)
-function getUserState(userId) {
-  return cache.getUserState(userId);
-}
-
-// Инициализация админ-панели
-const adminPanel = new AdminPanelHandler(bot, getUserState);
+// Админ-панель временно отключена
+// function getUserState(userId) {
+//   return cache.getUserState(userId);
+// }
+// const adminPanel = new AdminPanelHandler(bot, getUserState);
 
 // Регистрация команд
 registerStartCommand(bot);
-registerAdminCommand(bot, adminPanel);
+// registerAdminCommand(bot, adminPanel); // временно отключена
 
 // Регистрация глобальных обработчиков
 registerGlobalHandlers(bot);
