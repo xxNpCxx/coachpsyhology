@@ -102,8 +102,8 @@ async function startBot() {
     if (process.env.NODE_ENV === 'production') {
       // Production: webhook mode
       if (WEBHOOK_URL) {
-        await bot.telegram.setWebhook(`${WEBHOOK_URL}/webhook`);
-        console.log('🌐 Webhook установлен:', `${WEBHOOK_URL}/webhook`);
+        await bot.telegram.setWebhook(`${WEBHOOK_URL}`);
+        console.log('🌐 Webhook установлен:', `${WEBHOOK_URL}`);
       }
       
       app.listen(PORT, '0.0.0.0', () => {
