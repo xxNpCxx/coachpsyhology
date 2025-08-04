@@ -186,8 +186,20 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+// Проверка является ли пользователь владельцем бота
+function isOwner(userId) {
+  const ownerId = process.env.ADMIN_USER_ID;
+  return ownerId && userId.toString() === ownerId.toString();
+}
+
 // Проверка подписки пользователя на канал
 async function checkSubscription(userId) {
+  // Владелец бота освобождается от проверки подписки
+  if (isOwner(userId)) {
+    console.log('🔑 Владелец бота освобождён от проверки подписки:', userId);
+    return true;
+  }
+  
   const channelId = process.env.REQUIRED_CHANNEL_ID;
   if (!channelId) return true; // если канал не задан, пропускаем проверку
   try {
@@ -307,7 +319,10 @@ async function sendQuestion(ctx, userId) {
 
   // --- Новая логика: проверка комментария после каждого 5-го вопроса ---
   if (userState.currentQuestionIndex > 0 && userState.currentQuestionIndex % 5 === 0) {
-    if (!allowedToContinue.has(userId)) {
+    // Владелец бота освобождается от проверки комментариев
+    if (isOwner(userId)) {
+      console.log('🔑 Владелец бота освобождён от проверки комментариев:', userId);
+    } else if (!allowedToContinue.has(userId)) {
       waitingForComment.add(userId);
       console.log('Пользователь должен оставить комментарий, добавлен в waitingForComment:', Array.from(waitingForComment));
       await ctx.reply(
@@ -756,6 +771,36 @@ bot.command('force_continue', async (ctx) => {
   } else {
     await ctx.reply('❌ Вам не нужно принудительное продолжение');
   }
+});
+
+// Команда для определения вашего Telegram ID
+bot.command('my_id', async (ctx) => {
+  const userId = ctx.from.id;
+  const username = ctx.from.username;
+  const firstName = ctx.from.first_name;
+  const isBot = ctx.from.is_bot;
+  const isOwnerUser = isOwner(userId);
+  
+  console.log('🆔 Запрос ID от пользователя:', userId, username, firstName, 'is_bot:', isBot, 'is_owner:', isOwnerUser);
+  
+  let message = `🆔 *Ваша информация:*\n\n`;
+  message += `*ID:* \`${userId}\`\n`;
+  message += `*Username:* ${username ? '@' + username : 'Не указан'}\n`;
+  message += `*Имя:* ${firstName || 'Не указано'}\n`;
+  message += `*Тип аккаунта:* ${isBot ? 'Бот' : 'Пользователь'}\n`;
+  message += `*Владелец бота:* ${isOwnerUser ? '✅ Да' : '❌ Нет'}\n\n`;
+  
+  if (isOwnerUser) {
+    message += `👑 *Привилегии владельца:*\n`;
+    message += `• Проход теста без подписки на канал\n`;
+    message += `• Проход теста без комментариев\n`;
+    message += `• Доступ к админ-панели (/admin)\n\n`;
+  }
+  
+  message += `*Текущий список разрешённых ID:* \`[1087968824]\`\n`;
+  message += `*ADMIN_USER_ID:* \`${process.env.ADMIN_USER_ID || 'Не настроен'}\``;
+  
+  await ctx.reply(message, { parse_mode: 'Markdown' });
 });
 
 // --- ДОБАВЛЕНО: Отслеживание комментариев в группе ---
