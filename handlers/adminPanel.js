@@ -130,20 +130,7 @@ class AdminPanelHandler {
       const limit = 10;
       const offset = (page - 1) * limit;
       
-      console.log('🔍 Загружаем список пользователей с деталями...');
       const users = await userService.getUsersWithDetails(limit, offset);
-      console.log('📊 Получено пользователей:', users.length);
-      
-      // Логируем первого пользователя для отладки
-      if (users.length > 0) {
-        console.log('👤 Первый пользователь:', {
-          id: users[0].telegram_id,
-          name: users[0].first_name,
-          latestResults: users[0].latestResults?.length || 0,
-          hasUserState: !!this.getUserState(users[0].telegram_id)
-        });
-      }
-      
       const stats = await userService.getUsersStats();
       
       let message = `👥 *Список пользователей* (страница ${page})\n\n`;

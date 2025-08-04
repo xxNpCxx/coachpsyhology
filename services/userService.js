@@ -29,7 +29,7 @@ class UserService {
   async getUserByTelegramId(telegramId) {
     try {
       const result = await pool.query(
-        'SELECT * FROM users WHERE telegram_id = $1',
+        'SELECT * FROM users WHERE telegram_id = $1::bigint',
         [telegramId]
       );
       return result.rows[0] || null;
@@ -111,26 +111,16 @@ class UserService {
   // Получение расширенной информации о пользователях для админ-панели
   async getUsersWithDetails(limit = 50, offset = 0) {
     try {
-      console.log('🔍 getUsersWithDetails: получаем базовых пользователей...');
       const users = await this.getAllUsers(limit, offset);
-      console.log('📊 getUsersWithDetails: получено базовых пользователей:', users.length);
-      
       const testResultService = require('./testResultService');
       
       // Получаем дополнительную информацию для каждого пользователя
       const usersWithDetails = await Promise.all(
         users.map(async (user) => {
           const userId = user.telegram_id;
-          console.log(`🔍 Получаем результаты для пользователя ${userId} (${user.first_name})...`);
-          console.log(`🔢 Тип userId: ${typeof userId}, значение: ${userId}`);
           
           // Получаем последние результаты теста
           const latestResults = await testResultService.getLatestTestResults(userId);
-          console.log(`📊 Пользователь ${userId} имеет ${latestResults?.length || 0} результатов`);
-          
-          if (latestResults && latestResults.length > 0) {
-            console.log(`✅ Результаты для ${userId}:`, latestResults.map(r => `${r.archetype_name}: ${r.percentage}%`));
-          }
           
           return {
             ...user,
@@ -139,7 +129,6 @@ class UserService {
         })
       );
       
-      console.log('✅ getUsersWithDetails: обработка завершена');
       return usersWithDetails;
     } catch (error) {
       console.error('❌ Ошибка getUsersWithDetails:', error);
@@ -194,7 +183,7 @@ class UserService {
       const result = await pool.query(`
         UPDATE users 
         SET is_admin = $2, updated_at = CURRENT_TIMESTAMP
-        WHERE telegram_id = $1
+        WHERE telegram_id = $1::bigint
         RETURNING *
       `, [telegramId, isAdmin]);
       
