@@ -1,6 +1,26 @@
 import { testsPG } from '../pg/tests.pg.js';
 import { cache } from '../utils/cache.js';
 
+// Функция для получения имени PDF файла по названию архетипа
+function getPdfFileName(archetypeName) {
+  const pdfMap = {
+    'Воин': 'воин.pdf',
+    'Маг': 'маг.pdf',
+    'Дитя': 'дитя.pdf',
+    'Искатель': 'искатель.pdf',
+    'Бунтарь': 'бунтарь.pdf',
+    'Любовник': 'любовник.pdf',
+    'Творец': 'творец.pdf',
+    'Шут': 'шут.pdf',
+    'Мудрец': 'мудрец.pdf',
+    'Правитель': 'правитель.pdf',
+    'Славный малый': 'славный%20малый.pdf',
+    'Опекун': 'опекун.pdf'
+  };
+  
+  return pdfMap[archetypeName] || 'искатель.pdf'; // fallback
+}
+
 /**
  * Глобальные обработчики для основных команд и кнопок
  */
@@ -81,7 +101,8 @@ export function registerGlobalHandlers(bot) {
       
       results.forEach((result, index) => {
         const emoji = ['🥇', '🥈', '🥉', '🏅'][index] || `${index + 1}.`;
-        message += `${emoji} **${result.archetype_name}**: ${result.percentage}%\n`;
+        const pdfFileName = getPdfFileName(result.archetype_name);
+        message += `${emoji} [**${result.archetype_name}**](https://coachpsyhology.onrender.com/answers/${pdfFileName}): ${result.percentage}%\n`;
       });
 
       message += `\n📅 Дата прохождения: ${new Date(results[0].created_at).toLocaleDateString('ru-RU')}`;
