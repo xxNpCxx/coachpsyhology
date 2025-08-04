@@ -150,10 +150,10 @@ class AdminPanelHandler {
           
           // Показываем либо результаты тестов, либо текущий прогресс
           if (user.latestResults && user.latestResults.length > 0) {
-            // Есть результаты тестов - показываем топ-3
+            // Есть результаты тестов - показываем топ-4
             message += `   📊 *Последние результаты:*\n`;
-            user.latestResults.slice(0, 3).forEach((result, idx) => {
-              const position = ['🥇', '🥈', '🥉'][idx] || `${idx + 1}.`;
+            user.latestResults.slice(0, 4).forEach((result, idx) => {
+              const position = ['🥇', '🥈', '🥉', '🏅'][idx] || `${idx + 1}.`;
               message += `      ${position} ${result.archetype_name}: ${result.percentage}%\n`;
             });
             message += `   Тестов: ${testsCount} | Последний: ${lastTest}\n\n`;
