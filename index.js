@@ -681,14 +681,8 @@ server.listen(PORT, async () => {
   });
 });
 
-// Обработка неизвестных callback queries (должен быть последним)
-bot.action(/.*/, async (ctx) => {
-  try {
-    await ctx.answerCbQuery('Неизвестная команда');
-  } catch (error) {
-    console.log('Не удалось ответить на неизвестный callback query:', error.message);
-  }
-});
+// УДАЛЕН: Этот обработчик блокировал админ-панель!
+// Обработка неизвестных callback queries перенесена в конец файла
 
 // Обработка нажатия на кнопку "Я подписался"
 bot.action('check_subscription', async (ctx) => {
@@ -944,4 +938,14 @@ bot.on('raw', async (ctx, next) => {
     }
   }
   await next();
+});
+
+// Обработка неизвестных callback queries (ДОЛЖЕН БЫТЬ САМЫМ ПОСЛЕДНИМ!)
+bot.action(/.*/, async (ctx) => {
+  console.log('⚠️ Неизвестный callback query:', ctx.callbackQuery?.data);
+  try {
+    await ctx.answerCbQuery('Неизвестная команда');
+  } catch (error) {
+    console.log('Не удалось ответить на неизвестный callback query:', error.message);
+  }
 });
