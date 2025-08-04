@@ -137,12 +137,20 @@ bot.catch((err, ctx) => {
 // Graceful shutdown
 process.once('SIGINT', () => {
   console.log('👋 Получен SIGINT, останавливаем бота...');
-  bot.stop('SIGINT');
+  try {
+    bot.stop('SIGINT');
+  } catch {
+    console.log('ℹ️ Бот уже остановлен или не запущен');
+  }
 });
 
 process.once('SIGTERM', () => {
   console.log('👋 Получен SIGTERM, останавливаем бота...');
-  bot.stop('SIGTERM');
+  try {
+    bot.stop('SIGTERM');
+  } catch {
+    console.log('ℹ️ Бот уже остановлен или не запущен');
+  }
 });
 
 // Запускаем бота
