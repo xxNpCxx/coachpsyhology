@@ -32,12 +32,39 @@ await bot.setWebhook(`${process.env.WEBHOOK_URL}/webhook`);
 bot.setWebhookInfo(); // НЕ СУЩЕСТВУЕТ
 ```
 
-### 2. Клавиатуры
+### 2. Клавиатуры - КРИТИЧЕСКИ ВАЖНО!
+
+#### ⚠️ ЧАСТАЯ ОШИБКА: Двойная вложенность reply_markup
 ```javascript
-// ❌ НЕ смешивай inline и reply клавиатуры
+// ❌ НЕПРАВИЛЬНО - Функции Markup создают объект с reply_markup:
+const keyboard = Markup.keyboard([['Кнопка']]);
+// keyboard = { reply_markup: { keyboard: [...] } }
+
+await ctx.reply('Текст', { reply_markup: keyboard });
+// Результат: { reply_markup: { reply_markup: { keyboard: [...] } } } ← ДВОЙНАЯ ВЛОЖЕННОСТЬ!
+// КНОПКИ НЕ ОТОБРАЖАЮТСЯ!
+
+// ✅ ПРАВИЛЬНО - Способ 1: Извлекай .reply_markup
+await ctx.reply('Текст', { reply_markup: Markup.keyboard([['Кнопка']]).reply_markup });
+
+// ✅ ПРАВИЛЬНО - Способ 2: Прямое создание объектов (рекомендуется)
+await ctx.reply('Текст', {
+  reply_markup: {
+    keyboard: [['Кнопка']],
+    resize_keyboard: true
+  }
+});
+
+// ✅ ПРАВИЛЬНО - Способ 3: Прямое использование Markup
+await ctx.reply('Текст', Markup.keyboard([['Кнопка']]));
+```
+
+#### 🚫 Общие правила:
+```javascript
+// ❌ НЕ смешивай inline и reply клавиатуры в одном сообщении
 // ✅ Отправляй отдельными сообщениями
-await bot.sendMessage(chatId, 'Действия:', { reply_markup: inlineKeyboard });
-await bot.sendMessage(chatId, 'Меню:', { reply_markup: replyKeyboard });
+await ctx.reply('Действия:', { reply_markup: inlineKeyboard });
+await ctx.reply('Меню:', { reply_markup: replyKeyboard });
 ```
 
 ### 3. Безопасность
