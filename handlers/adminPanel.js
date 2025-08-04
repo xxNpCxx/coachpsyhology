@@ -92,16 +92,25 @@ class AdminPanelHandler {
     adminStates.set(userId, { currentSection: 'main' });
     console.log('✅ Открываем админ-панель для пользователя:', userId);
 
-    const keyboard = getAdminMainKeyboard();
-    console.log('🔧 Reply клавиатура:', JSON.stringify(keyboard, null, 2));
+    console.log('🔧 Отправляем админ reply клавиатуру...');
 
+    // Используем тот же подход, что работает в simple_test
     await ctx.reply(
       '🔐 *Панель администратора*\n\nВыберите действие:',
       {
         parse_mode: 'Markdown',
-        reply_markup: keyboard
+        reply_markup: {
+          keyboard: [
+            ['👥 Список пользователей', '📊 Статистика'],
+            ['🔍 Поиск пользователя', '📨 Отправить сообщение'],
+            ['⚙️ Настройки', '🔙 Главное меню']
+          ],
+          resize_keyboard: true
+        }
       }
     );
+    
+    console.log('✅ Админ reply клавиатура отправлена');
   }
 
   // Обработка списка пользователей
@@ -663,16 +672,33 @@ class AdminPanelHandler {
     adminStates.set(userId, { currentSection: 'main' });
     console.log('✅ Открываем inline админ-панель для пользователя:', userId);
 
-    const inlineKeyboard = getAdminMainInlineKeyboard();
-    console.log('🔧 Inline клавиатура:', JSON.stringify(inlineKeyboard, null, 2));
+    console.log('🔧 Отправляем админ inline клавиатуру...');
 
+    // Используем тот же подход, что работает в simple_test
     await ctx.reply(
       '🔐 *Панель администратора (Inline)*\n\nВыберите действие:',
       {
         parse_mode: 'Markdown',
-        reply_markup: inlineKeyboard
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '👥 Список пользователей', callback_data: 'admin_users_list' },
+              { text: '📊 Статистика', callback_data: 'admin_stats' }
+            ],
+            [
+              { text: '🔍 Поиск пользователя', callback_data: 'admin_search' },
+              { text: '📨 Отправить сообщение', callback_data: 'admin_send_message' }
+            ],
+            [
+              { text: '⚙️ Настройки', callback_data: 'admin_settings' },
+              { text: '🔙 Главное меню', callback_data: 'admin_back_to_main' }
+            ]
+          ]
+        }
       }
     );
+    
+    console.log('✅ Админ inline клавиатура отправлена');
   }
 }
 
