@@ -122,6 +122,7 @@ class UserService {
         users.map(async (user) => {
           const userId = user.telegram_id;
           console.log(`🔍 Получаем результаты для пользователя ${userId} (${user.first_name})...`);
+          console.log(`🔢 Тип userId: ${typeof userId}, значение: ${userId}`);
           
           // Получаем последние результаты теста
           const latestResults = await testResultService.getLatestTestResults(userId);

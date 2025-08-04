@@ -66,6 +66,9 @@ class TestResultService {
   // Получение последних результатов теста пользователя
   async getLatestTestResults(userId) {
     try {
+      console.log(`🔍 getLatestTestResults: поиск для пользователя ${userId}`);
+      console.log(`🔢 getLatestTestResults: тип userId: ${typeof userId}, значение: ${userId}`);
+      
       // Получаем дату последнего теста
       const latestTest = await pool.query(`
         SELECT created_at FROM test_results 
@@ -74,11 +77,15 @@ class TestResultService {
         LIMIT 1
       `, [userId]);
 
+      console.log(`📊 getLatestTestResults: найдено записей с датой: ${latestTest.rows.length}`);
+      
       if (latestTest.rows.length === 0) {
+        console.log(`⚠️ getLatestTestResults: нет результатов для пользователя ${userId}`);
         return [];
       }
 
       const latestDate = latestTest.rows[0].created_at;
+      console.log(`🕒 getLatestTestResults: последняя дата теста: ${latestDate}`);
 
       // Получаем результаты последнего теста
       const result = await pool.query(`
@@ -86,6 +93,11 @@ class TestResultService {
         WHERE user_id = $1 AND created_at = $2
         ORDER BY position ASC
       `, [userId, latestDate]);
+      
+      console.log(`✅ getLatestTestResults: получено результатов: ${result.rows.length}`);
+      if (result.rows.length > 0) {
+        console.log(`📋 getLatestTestResults результаты:`, result.rows.map(r => `${r.archetype_name}: ${r.percentage}%`));
+      }
       
       return result.rows;
     } catch (error) {
