@@ -97,7 +97,7 @@ export class TestsPG {
       // Получаем результаты последнего теста
       const result = await pool.query(`
         SELECT * FROM test_results 
-        WHERE user_id = $1::bigint AND created_at = $2
+        WHERE user_id = $1::bigint AND DATE(created_at) = DATE($2)
         ORDER BY position ASC
       `, [userId, latestDate]);
       
