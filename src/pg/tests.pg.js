@@ -95,6 +95,7 @@ export class TestsPG {
       console.log(`📅 [ТЕСТ] Последняя дата: ${latestDate}`);
 
       // Получаем результаты последнего теста
+      console.log(`🔍 [ТЕСТ] SQL запрос: user_id=${userId}, date=${latestDate}`);
       const result = await pool.query(`
         SELECT * FROM test_results 
         WHERE user_id = $1::bigint AND DATE(created_at) = DATE($2)
@@ -102,6 +103,18 @@ export class TestsPG {
       `, [userId, latestDate]);
       
       console.log(`✅ [ТЕСТ] Получено результатов: ${result.rows.length}`);
+      
+      // Дополнительная диагностика
+      if (result.rows.length === 0) {
+        console.log(`🔍 [ТЕСТ] Проверяем все записи для user_id=${userId}:`);
+        const allResults = await pool.query(`
+          SELECT user_id, archetype_name, created_at, DATE(created_at) as date_only
+          FROM test_results 
+          WHERE user_id = $1::bigint
+          ORDER BY created_at DESC
+        `, [userId]);
+        console.log(`📊 [ТЕСТ] Все записи:`, allResults.rows);
+      }
       if (result.rows.length > 0) {
         console.log(`🎯 [ТЕСТ] Результаты:`, result.rows.map(r => `${r.archetype_name}: ${r.percentage}%`).join(', '));
       }
