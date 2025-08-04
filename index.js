@@ -808,12 +808,21 @@ bot.command('my_id', async (ctx) => {
   
   console.log('🆔 Запрос ID от пользователя:', userId, username, firstName, 'is_bot:', isBot, 'is_owner:', isOwnerUser);
   
+  // Проверяем админские права
+  let isAdminUser = false;
+  try {
+    isAdminUser = await userService.isAdmin(userId);
+  } catch (error) {
+    console.log('❌ Ошибка проверки админских прав:', error.message);
+  }
+  
   let message = `🆔 *Ваша информация:*\n\n`;
   message += `*ID:* \`${userId}\`\n`;
   message += `*Username:* ${username ? '@' + username : 'Не указан'}\n`;
   message += `*Имя:* ${firstName || 'Не указано'}\n`;
   message += `*Тип аккаунта:* ${isBot ? 'Бот' : 'Пользователь'}\n`;
-  message += `*Владелец бота:* ${isOwnerUser ? '✅ Да' : '❌ Нет'}\n\n`;
+  message += `*Владелец бота:* ${isOwnerUser ? '✅ Да' : '❌ Нет'}\n`;
+  message += `*Администратор:* ${isAdminUser ? '✅ Да' : '❌ Нет'}\n\n`;
   
   if (isOwnerUser) {
     message += `👑 *Привилегии владельца:*\n`;
@@ -823,7 +832,47 @@ bot.command('my_id', async (ctx) => {
   }
   
   message += `*Текущий список разрешённых ID:* \`[1087968824]\`\n`;
-  message += `*ADMIN_USER_ID:* \`${process.env.ADMIN_USER_ID || 'Не настроен'}\``;
+  message += `*ADMIN_USER_ID:* \`${process.env.ADMIN_USER_ID || 'Не настроен'}\`\n`;
+  message += `*DATABASE_URL:* ${process.env.DATABASE_URL ? '✅ Настроен' : '❌ Не настроен'}`;
+  
+  await ctx.reply(message, { parse_mode: 'Markdown' });
+});
+
+// Команда для тестирования подключения к базе данных
+bot.command('test_db', async (ctx) => {
+  const userId = ctx.from.id;
+  
+  // Проверяем, что это владелец бота
+  if (!isOwner(userId)) {
+    await ctx.reply('❌ Эта команда доступна только владельцу бота.');
+    return;
+  }
+  
+  console.log('🔍 Тестирование подключения к базе данных...');
+  
+  let message = '🔍 *Тест базы данных:*\n\n';
+  
+  try {
+    // Проверяем пользователя в БД
+    const user = await userService.getUserByTelegramId(userId);
+    message += `*Пользователь в БД:* ${user ? '✅ Найден' : '❌ Не найден'}\n`;
+    
+    if (user) {
+      message += `*ID в БД:* ${user.id}\n`;
+      message += `*is_admin:* ${user.is_admin ? '✅ true' : '❌ false'}\n`;
+      message += `*Дата создания:* ${user.created_at}\n`;
+    }
+    
+    // Проверяем админские права
+    const isAdminUser = await userService.isAdmin(userId);
+    message += `*Проверка isAdmin():* ${isAdminUser ? '✅ true' : '❌ false'}\n\n`;
+    
+    message += '✅ *Подключение к базе данных работает!*';
+    
+  } catch (error) {
+    console.error('❌ Ошибка теста БД:', error);
+    message += `❌ *Ошибка подключения к БД:*\n\`${error.message}\``;
+  }
   
   await ctx.reply(message, { parse_mode: 'Markdown' });
 });

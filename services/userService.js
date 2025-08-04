@@ -41,23 +41,48 @@ class UserService {
 
   // Проверка является ли пользователь администратором
   async isAdmin(telegramId) {
+    console.log('🔍 Проверка админских прав для пользователя:', telegramId);
+    console.log('🔍 ADMIN_USER_ID из env:', process.env.ADMIN_USER_ID);
+    
     try {
       const user = await this.getUserByTelegramId(telegramId);
-      if (!user) return false;
+      console.log('🔍 Пользователь из БД:', user ? `ID: ${user.telegram_id}, is_admin: ${user.is_admin}` : 'НЕ НАЙДЕН');
+      
+      if (!user) {
+        console.log('❌ Пользователь не найден в БД, проверяем только ADMIN_USER_ID');
+        // Если пользователя нет в БД, проверяем только переменную окружения
+        const adminUserId = process.env.ADMIN_USER_ID;
+        const isOwner = adminUserId && telegramId.toString() === adminUserId;
+        console.log('🔍 Проверка владельца:', telegramId.toString(), '===', adminUserId, '=', isOwner);
+        return isOwner;
+      }
       
       // Проверяем флаг is_admin в БД
-      if (user.is_admin) return true;
-      
-      // Проверяем переменную окружения ADMIN_USER_ID
-      const adminUserId = process.env.ADMIN_USER_ID;
-      if (adminUserId && telegramId.toString() === adminUserId) {
+      if (user.is_admin) {
+        console.log('✅ Пользователь админ по флагу в БД');
         return true;
       }
       
+      // Проверяем переменную окружения ADMIN_USER_ID
+      const adminUserId = process.env.ADMIN_USER_ID;
+      const isOwner = adminUserId && telegramId.toString() === adminUserId;
+      console.log('🔍 Проверка владельца:', telegramId.toString(), '===', adminUserId, '=', isOwner);
+      
+      if (isOwner) {
+        console.log('✅ Пользователь админ по ADMIN_USER_ID');
+        return true;
+      }
+      
+      console.log('❌ Пользователь НЕ админ');
       return false;
     } catch (error) {
       console.error('❌ Ошибка isAdmin:', error);
-      return false;
+      console.log('🔍 Fallback проверка ADMIN_USER_ID при ошибке БД');
+      // Fallback: если БД недоступна, проверяем только переменную окружения
+      const adminUserId = process.env.ADMIN_USER_ID;
+      const isOwner = adminUserId && telegramId.toString() === adminUserId;
+      console.log('🔍 Fallback проверка владельца:', telegramId.toString(), '===', adminUserId, '=', isOwner);
+      return isOwner;
     }
   }
 
