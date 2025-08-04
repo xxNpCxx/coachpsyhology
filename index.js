@@ -841,23 +841,59 @@ bot.command('test_keyboard', async (ctx) => {
     return;
   }
   
-  const { getAdminMainKeyboard, getAdminMainInlineKeyboard } = require('./keyboards/adminKeyboards');
+  console.log('🧪 Начинаем тестирование клавиатур...');
   
-  // Тест reply клавиатуры
-  const replyKeyboard = getAdminMainKeyboard();
-  console.log('🔧 Тест Reply клавиатуры:', JSON.stringify(replyKeyboard, null, 2));
+  // Тест 1: Самая простая inline кнопка
+  try {
+    await ctx.reply('🧪 Тест 1: Простая inline кнопка', {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: '✅ Тест кнопка', callback_data: 'test_button' }
+        ]]
+      }
+    });
+    console.log('✅ Тест 1 отправлен');
+  } catch (error) {
+    console.error('❌ Ошибка Тест 1:', error);
+  }
   
-  await ctx.reply('🧪 Тест Reply клавиатуры:', {
-    reply_markup: replyKeyboard
-  });
+  // Тест 2: Простая reply клавиатура  
+  try {
+    await ctx.reply('🧪 Тест 2: Простая reply клавиатура', {
+      reply_markup: {
+        keyboard: [['✅ Тест кнопка']],
+        resize_keyboard: true,
+        one_time_keyboard: true
+      }
+    });
+    console.log('✅ Тест 2 отправлен');
+  } catch (error) {
+    console.error('❌ Ошибка Тест 2:', error);
+  }
   
-  // Тест inline клавиатуры
-  const inlineKeyboard = getAdminMainInlineKeyboard();
-  console.log('🔧 Тест Inline клавиатуры:', JSON.stringify(inlineKeyboard, null, 2));
+  // Тест 3: Через Markup.inlineKeyboard  
+  try {
+    const { Markup } = require('telegraf');
+    await ctx.reply('🧪 Тест 3: Markup.inlineKeyboard', {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('✅ Тест Markup', 'test_markup')]
+      ])
+    });
+    console.log('✅ Тест 3 отправлен');
+  } catch (error) {
+    console.error('❌ Ошибка Тест 3:', error);
+  }
   
-  await ctx.reply('🧪 Тест Inline клавиатуры:', {
-    reply_markup: inlineKeyboard
-  });
+  // Тест 4: Через Markup.keyboard
+  try {
+    const { Markup } = require('telegraf');
+    await ctx.reply('🧪 Тест 4: Markup.keyboard', {
+      reply_markup: Markup.keyboard([['✅ Тест Markup Reply']]).resize()
+    });
+    console.log('✅ Тест 4 отправлен');
+  } catch (error) {
+    console.error('❌ Ошибка Тест 4:', error);
+  }
 });
 
 // Команда для тестирования подключения к базе данных
@@ -966,6 +1002,25 @@ bot.on('raw', async (ctx, next) => {
     }
   }
   await next();
+});
+
+// Обработчики тестовых кнопок
+bot.action('test_button', async (ctx) => {
+  await ctx.answerCbQuery('✅ Простая inline кнопка работает!');
+  await ctx.reply('🎉 Простая inline кнопка сработала!');
+});
+
+bot.action('test_markup', async (ctx) => {
+  await ctx.answerCbQuery('✅ Markup inline кнопка работает!');
+  await ctx.reply('🎉 Markup inline кнопка сработала!');
+});
+
+bot.hears('✅ Тест кнопка', async (ctx) => {
+  await ctx.reply('🎉 Простая reply кнопка сработала!');
+});
+
+bot.hears('✅ Тест Markup Reply', async (ctx) => {
+  await ctx.reply('🎉 Markup reply кнопка сработала!');
 });
 
 // Обработка неизвестных callback queries (ДОЛЖЕН БЫТЬ САМЫМ ПОСЛЕДНИМ!)
