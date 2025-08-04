@@ -51,7 +51,7 @@ class TestResultService {
     try {
       const result = await pool.query(`
         SELECT * FROM test_results 
-        WHERE user_id = $1 
+        WHERE user_id = $1::bigint 
         ORDER BY created_at DESC, position ASC
         LIMIT 20
       `, [userId]);
@@ -72,7 +72,7 @@ class TestResultService {
       // Получаем дату последнего теста
       const latestTest = await pool.query(`
         SELECT created_at FROM test_results 
-        WHERE user_id = $1 
+        WHERE user_id = $1::bigint 
         ORDER BY created_at DESC 
         LIMIT 1
       `, [userId]);
@@ -90,7 +90,7 @@ class TestResultService {
       // Получаем результаты последнего теста
       const result = await pool.query(`
         SELECT * FROM test_results 
-        WHERE user_id = $1 AND created_at = $2
+        WHERE user_id = $1::bigint AND created_at = $2
         ORDER BY position ASC
       `, [userId, latestDate]);
       
@@ -111,7 +111,7 @@ class TestResultService {
     try {
       const result = await pool.query(`
         SELECT * FROM question_answers 
-        WHERE user_id = $1 
+        WHERE user_id = $1::bigint 
         ORDER BY question_index ASC
       `, [userId]);
       
@@ -186,7 +186,7 @@ class TestResultService {
       const testCountResult = await pool.query(`
         SELECT COUNT(DISTINCT DATE(created_at)) as test_count
         FROM test_results 
-        WHERE user_id = $1
+        WHERE user_id = $1::bigint
       `, [userId]);
 
       // Статистика ответов
@@ -196,7 +196,7 @@ class TestResultService {
           AVG(answer_value) as avg_answer,
           COUNT(DISTINCT question_index) as questions_answered
         FROM question_answers 
-        WHERE user_id = $1
+        WHERE user_id = $1::bigint
       `, [userId]);
 
       return {
