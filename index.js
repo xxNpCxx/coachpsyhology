@@ -832,6 +832,34 @@ bot.command('my_id', async (ctx) => {
   await ctx.reply(message, { parse_mode: 'Markdown' });
 });
 
+// Команда для тестирования клавиатур
+bot.command('test_keyboard', async (ctx) => {
+  const userId = ctx.from.id;
+  
+  if (!isOwner(userId)) {
+    await ctx.reply('❌ Эта команда доступна только владельцу бота.');
+    return;
+  }
+  
+  const { getAdminMainKeyboard, getAdminMainInlineKeyboard } = require('./keyboards/adminKeyboards');
+  
+  // Тест reply клавиатуры
+  const replyKeyboard = getAdminMainKeyboard();
+  console.log('🔧 Тест Reply клавиатуры:', JSON.stringify(replyKeyboard, null, 2));
+  
+  await ctx.reply('🧪 Тест Reply клавиатуры:', {
+    reply_markup: replyKeyboard
+  });
+  
+  // Тест inline клавиатуры
+  const inlineKeyboard = getAdminMainInlineKeyboard();
+  console.log('🔧 Тест Inline клавиатуры:', JSON.stringify(inlineKeyboard, null, 2));
+  
+  await ctx.reply('🧪 Тест Inline клавиатуры:', {
+    reply_markup: inlineKeyboard
+  });
+});
+
 // Команда для тестирования подключения к базе данных
 bot.command('test_db', async (ctx) => {
   const userId = ctx.from.id;

@@ -92,11 +92,14 @@ class AdminPanelHandler {
     adminStates.set(userId, { currentSection: 'main' });
     console.log('✅ Открываем админ-панель для пользователя:', userId);
 
+    const keyboard = getAdminMainKeyboard();
+    console.log('🔧 Reply клавиатура:', JSON.stringify(keyboard, null, 2));
+
     await ctx.reply(
       '🔐 *Панель администратора*\n\nВыберите действие:',
       {
         parse_mode: 'Markdown',
-        reply_markup: getAdminMainKeyboard()
+        reply_markup: keyboard
       }
     );
   }
@@ -660,11 +663,14 @@ class AdminPanelHandler {
     adminStates.set(userId, { currentSection: 'main' });
     console.log('✅ Открываем inline админ-панель для пользователя:', userId);
 
+    const inlineKeyboard = getAdminMainInlineKeyboard();
+    console.log('🔧 Inline клавиатура:', JSON.stringify(inlineKeyboard, null, 2));
+
     await ctx.reply(
       '🔐 *Панель администратора (Inline)*\n\nВыберите действие:',
       {
         parse_mode: 'Markdown',
-        reply_markup: getAdminMainInlineKeyboard()
+        reply_markup: inlineKeyboard
       }
     );
   }
