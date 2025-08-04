@@ -1,5 +1,34 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+
+# OS files
 .DS_Store
+
 # Старые файлы (архив)
 old/
 index.js.backup
-.DS_Store
+
+# Build files
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# IDE
+.vscode/
+.idea/

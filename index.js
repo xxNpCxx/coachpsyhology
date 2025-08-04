@@ -8,4 +8,4 @@ import('./src/bot.js')
   .catch((error) => {
     console.error('❌ Ошибка запуска бота:', error);
     process.exit(1);
-  });
+});
