@@ -2,13 +2,14 @@
   "name": "archetype-test-bot",
   "version": "1.0.0",
   "description": "Telegram bot for archetype personality test",
-  "main": "index.js",
+  "main": "src/bot.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node src/bot.js",
+    "dev": "nodemon src/bot.js",
     "migrate": "node migrations/migrate.js",
     "test-db": "node scripts/test-db.js",
-    "migration-status": "node scripts/migration-status.js"
+    "migration-status": "node scripts/migration-status.js",
+    "cache-stats": "node -e \"import('./src/utils/cache.js').then(({cache}) => console.log('📊 Кеш:', cache.getStats()))\""
   },
   "dependencies": {
     "dotenv": "16.3.1",
