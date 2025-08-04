@@ -38,7 +38,7 @@ bot.use(async (ctx, next) => {
   
   // Если пользователь в сцене, передаем управление сценам
   if (ctx.scene && ctx.scene.current) {
-    return await next();
+    return next();
   }
   
   await next();
@@ -56,7 +56,7 @@ function getUserState(userId) {
 }
 
 // Инициализация админ-панели
-const adminPanel = new AdminPanelHandler(bot, getUserState);
+new AdminPanelHandler(bot, getUserState);
 
 // Регистрация команд
 registerStartCommand(bot);

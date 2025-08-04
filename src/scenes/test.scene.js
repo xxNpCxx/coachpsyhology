@@ -104,7 +104,7 @@ async function showQuestion(ctx, userId) {
       parse_mode: 'Markdown',
       reply_markup: keyboard
     });
-  } catch (error) {
+  } catch {
     // Если не удалось редактировать, отправляем новое сообщение
     await ctx.reply(questionText, {
       parse_mode: 'Markdown',
@@ -179,7 +179,7 @@ async function showResults(ctx, userId) {
 }
 
 // Выход из сцены
-testScene.leave(async (ctx) => {
+testScene.leave((ctx) => {
   const userId = ctx.from.id;
   cache.deleteUserState(userId);
 });

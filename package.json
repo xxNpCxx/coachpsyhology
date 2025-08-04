@@ -10,7 +10,12 @@
     "migrate": "node migrations/migrate.js",
     "test-db": "node scripts/test-db.js",
     "migration-status": "node scripts/migration-status.js",
-    "cache-stats": "node -e \"import('./src/utils/cache.js').then(({cache}) => console.log('📊 Кеш:', cache.getStats()))\""
+    "cache-stats": "node -e \"import('./src/utils/cache.js').then(({cache}) => console.log('📊 Кеш:', cache.getStats()))\"",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "lint:check": "eslint src/ --max-warnings 0",
+    "type-check": "find src -name '*.js' -exec node --check {} \\;",
+    "prepare": "husky"
   },
   "dependencies": {
     "dotenv": "16.3.1",
@@ -19,6 +24,10 @@
     "telegraf": "4.12.2"
   },
   "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "eslint": "^9.32.0",
+    "eslint-plugin-import": "^2.32.0",
+    "husky": "^9.1.7",
     "nodemon": "^3.0.2"
   },
   "keywords": [
