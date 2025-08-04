@@ -2,6 +2,7 @@
   "name": "archetype-test-bot",
   "version": "1.0.0",
   "description": "Telegram bot for archetype personality test",
+  "type": "module",
   "main": "src/bot.js",
   "scripts": {
     "start": "node src/bot.js",

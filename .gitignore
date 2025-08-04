@@ -1,1 +1,5 @@
 .DS_Store
+# Старые файлы (архив)
+old/
+index.js.backup
+.DS_Store
