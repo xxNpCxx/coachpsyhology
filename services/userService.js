@@ -57,21 +57,20 @@ class UserService {
       
       // Проверяем флаг is_admin в БД
       if (user.is_admin) {
-        console.log('✅ Пользователь админ по флагу в БД');
+        console.log('✅ Доступ к админ-панели разрешён:', telegramId);
         return true;
       }
       
       // Проверяем переменную окружения ADMIN_USER_ID
       const adminUserId = process.env.ADMIN_USER_ID;
       const isOwner = adminUserId && telegramId.toString() === adminUserId;
-      console.log('🔍 Проверка владельца:', telegramId.toString(), '===', adminUserId, '=', isOwner);
       
       if (isOwner) {
-        console.log('✅ Пользователь админ по ADMIN_USER_ID');
+        console.log('✅ Доступ к админ-панели разрешён (env):', telegramId);
         return true;
       }
       
-      console.log('❌ Пользователь НЕ админ');
+      console.log('❌ Доступ к админ-панели отклонён:', telegramId);
       return false;
     } catch (error) {
       console.error('❌ Ошибка isAdmin:', error);
