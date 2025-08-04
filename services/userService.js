@@ -108,6 +108,34 @@ class UserService {
     }
   }
 
+  // Получение расширенной информации о пользователях для админ-панели
+  async getUsersWithDetails(limit = 50, offset = 0) {
+    try {
+      const users = await this.getAllUsers(limit, offset);
+      const testResultService = require('./testResultService');
+      
+      // Получаем дополнительную информацию для каждого пользователя
+      const usersWithDetails = await Promise.all(
+        users.map(async (user) => {
+          const userId = user.telegram_id;
+          
+          // Получаем последние результаты теста
+          const latestResults = await testResultService.getLatestTestResults(userId);
+          
+          return {
+            ...user,
+            latestResults: latestResults || []
+          };
+        })
+      );
+      
+      return usersWithDetails;
+    } catch (error) {
+      console.error('❌ Ошибка getUsersWithDetails:', error);
+      throw error;
+    }
+  }
+
   // Получение статистики пользователей
   async getUsersStats() {
     try {

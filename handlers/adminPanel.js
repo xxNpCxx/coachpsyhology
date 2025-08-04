@@ -20,8 +20,9 @@ const {
 const adminStates = new Map();
 
 class AdminPanelHandler {
-  constructor(bot) {
+  constructor(bot, getUserState) {
     this.bot = bot;
+    this.getUserState = getUserState;
     this.setupHandlers();
   }
 
@@ -129,7 +130,7 @@ class AdminPanelHandler {
       const limit = 10;
       const offset = (page - 1) * limit;
       
-      const users = await userService.getAllUsers(limit, offset);
+      const users = await userService.getUsersWithDetails(limit, offset);
       const stats = await userService.getUsersStats();
       
       let message = `👥 *Список пользователей* (страница ${page})\n\n`;
@@ -146,7 +147,30 @@ class AdminPanelHandler {
           
           message += `${index + 1}. ${name}${adminBadge}\n`;
           message += `   ID: \`${user.telegram_id}\`\n`;
-          message += `   Тестов: ${testsCount} | Последний: ${lastTest}\n\n`;
+          
+          // Показываем либо результаты тестов, либо текущий прогресс
+          if (user.latestResults && user.latestResults.length > 0) {
+            // Есть результаты тестов - показываем топ-3
+            message += `   📊 *Последние результаты:*\n`;
+            user.latestResults.slice(0, 3).forEach((result, idx) => {
+              const position = ['🥇', '🥈', '🥉'][idx] || `${idx + 1}.`;
+              message += `      ${position} ${result.archetype_name}: ${result.percentage}%\n`;
+            });
+            message += `   Тестов: ${testsCount} | Последний: ${lastTest}\n\n`;
+          } else {
+            // Нет результатов - проверяем текущий прогресс
+            const userState = this.getUserState(user.telegram_id);
+            if (userState && userState.currentQuestionIndex > 0) {
+              const progress = Math.round((userState.currentQuestionIndex / 84) * 100);
+              const progressBar = '🟩'.repeat(Math.floor(progress / 10)) + '⬜'.repeat(10 - Math.floor(progress / 10));
+              message += `   🎯 *В процессе теста:*\n`;
+              message += `      Вопрос ${userState.currentQuestionIndex}/84 (${progress}%)\n`;
+              message += `      ${progressBar}\n\n`;
+            } else {
+              message += `   📝 *Статус:* Тест не начат\n`;
+              message += `   Тестов: ${testsCount} | Последний: ${lastTest}\n\n`;
+            }
+          }
         });
       }
       

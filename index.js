@@ -20,8 +20,13 @@ const waitingForComment = new Set();
 // Инициализация бота
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
+// Функция для получения состояния пользователя (для админ-панели)
+function getUserState(userId) {
+  return userStates.get(userId) || null;
+}
+
 // Инициализация админ-панели
-const adminPanel = new AdminPanelHandler(bot);
+const adminPanel = new AdminPanelHandler(bot, getUserState);
 
 // Загрузка вопросов из JSON файла
 const archetypesData = JSON.parse(fs.readFileSync('./questions.json', 'utf8'));
