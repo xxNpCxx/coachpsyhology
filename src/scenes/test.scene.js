@@ -13,7 +13,29 @@ export const testScene = new Scenes.BaseScene("test");
 // Загрузка вопросов
 let questionsData;
 try {
-  questionsData = JSON.parse(fs.readFileSync('questions.json', 'utf8'));
+  const archetypesMapping = JSON.parse(fs.readFileSync('questions.json', 'utf8'));
+  
+  // Создаем массив вопросов из маппинга архетипов
+  const questions = [];
+  
+  // Проходим по всем архетипам и их вопросам
+  Object.entries(archetypesMapping).forEach(([archetype, questionNumbers]) => {
+    questionNumbers.forEach(questionNum => {
+      questions.push({
+        questionNumber: parseInt(questionNum),
+        answer1: "Полностью согласен",
+        answer2: "Скорее согласен", 
+        answer3: "Скорее не согласен",
+        answer4: "Полностью не согласен",
+        archetype: archetype
+      });
+    });
+  });
+  
+  // Сортируем по номеру вопроса
+  questions.sort((a, b) => a.questionNumber - b.questionNumber);
+  
+  questionsData = { questions };
   console.log(`✅ Загружено ${questionsData.questions.length} вопросов`);
 } catch (error) {
   console.error('❌ Ошибка загрузки questions.json:', error);
@@ -61,9 +83,10 @@ testScene.action(/answer_(\d+)/, async (ctx) => {
   const currentQuestion = questionsData.questions[userState.currentQuestionIndex];
   const archetype = currentQuestion.archetype;
   
-  // Увеличиваем счет архетипа
+  // Увеличиваем счет архетипа (4-балльная шкала: 1=4 балла, 2=3 балла, 3=2 балла, 4=1 балл)
+  const scoreForAnswer = 5 - answer; // 1->4, 2->3, 3->2, 4->1
   const currentScore = userState.archetypeScores.get(archetype) || 0;
-  userState.archetypeScores.set(archetype, currentScore + answer);
+  userState.archetypeScores.set(archetype, currentScore + scoreForAnswer);
   
   // Сохраняем ответ в историю
   userState.answers.push({
@@ -102,35 +125,50 @@ async function showQuestion(ctx, userId) {
   }
   
   const currentQuestion = questionsData.questions[userState.currentQuestionIndex];
+  const questionNumber = currentQuestion.questionNumber;
   
   const progress = Math.round((userState.currentQuestionIndex / questionsData.questions.length) * 100);
   const progressBar = '🟩'.repeat(Math.floor(progress / 10)) + '⬜'.repeat(10 - Math.floor(progress / 10));
   
-  let questionText = `*Вопрос ${userState.currentQuestionIndex + 1} из ${questionsData.questions.length}*\n\n`;
-  questionText += `${progressBar} ${progress}%\n\n`;
-  questionText += `${currentQuestion.question}\n\n`;
-  questionText += `Выберите наиболее подходящий вариант:`;
+  let caption = `*Вопрос ${userState.currentQuestionIndex + 1} из ${questionsData.questions.length}*\n\n`;
+  caption += `${progressBar} ${progress}%\n\n`;
+  caption += `Выберите наиболее подходящий вариант:`;
   
   const keyboard = {
     inline_keyboard: [
       [
         { text: currentQuestion.answer1, callback_data: 'answer_1' },
         { text: currentQuestion.answer2, callback_data: 'answer_2' }
+      ],
+      [
+        { text: currentQuestion.answer3, callback_data: 'answer_3' },
+        { text: currentQuestion.answer4, callback_data: 'answer_4' }
       ]
     ]
   };
   
+  // Путь к изображению вопроса
+  const imagePath = `questions/${questionNumber}.jpg`;
+  
   try {
-    await ctx.editMessageText(questionText, {
+    // Проверяем существование файла
+    if (!fs.existsSync(imagePath)) {
+      console.error(`❌ Файл изображения не найден: ${imagePath}`);
+      await ctx.reply(`❌ Ошибка: изображение для вопроса ${questionNumber} не найдено.`);
+      return ctx.scene.leave();
+    }
+    
+    // Отправляем изображение с подписью и клавиатурой
+    await ctx.replyWithPhoto({ source: imagePath }, {
+      caption: caption,
       parse_mode: 'Markdown',
       reply_markup: keyboard
     });
-  } catch {
-    // Если не удалось редактировать, отправляем новое сообщение
-    await ctx.reply(questionText, {
-      parse_mode: 'Markdown',
-      reply_markup: keyboard
-    });
+    
+  } catch (error) {
+    console.error('❌ Ошибка отправки изображения:', error);
+    await ctx.reply('❌ Ошибка отправки вопроса. Попробуйте позже.');
+    return ctx.scene.leave();
   }
 }
 
