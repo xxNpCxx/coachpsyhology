@@ -11,7 +11,15 @@ import fs from 'fs';
 export const testScene = new Scenes.BaseScene("test");
 
 // Загрузка вопросов
-const questionsData = JSON.parse(fs.readFileSync('questions.json', 'utf8'));
+let questionsData;
+try {
+  questionsData = JSON.parse(fs.readFileSync('questions.json', 'utf8'));
+  console.log(`✅ Загружено ${questionsData.questions.length} вопросов`);
+} catch (error) {
+  console.error('❌ Ошибка загрузки questions.json:', error);
+  // Fallback - создаем пустые вопросы
+  questionsData = { questions: [] };
+}
 
 // Вход в сцену
 testScene.enter(async (ctx) => {
@@ -80,6 +88,19 @@ testScene.action(/answer_(\d+)/, async (ctx) => {
 // Показ вопроса
 async function showQuestion(ctx, userId) {
   const userState = cache.getUserState(userId);
+  
+  // Проверяем, что вопросы загружены
+  if (!questionsData.questions || questionsData.questions.length === 0) {
+    await ctx.reply('❌ Ошибка загрузки вопросов. Попробуйте позже.');
+    return ctx.scene.leave();
+  }
+  
+  // Проверяем индекс вопроса
+  if (userState.currentQuestionIndex >= questionsData.questions.length) {
+    await ctx.reply('❌ Ошибка: вопрос не найден.');
+    return ctx.scene.leave();
+  }
+  
   const currentQuestion = questionsData.questions[userState.currentQuestionIndex];
   
   const progress = Math.round((userState.currentQuestionIndex / questionsData.questions.length) * 100);
