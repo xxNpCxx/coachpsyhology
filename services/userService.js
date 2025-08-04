@@ -41,12 +41,10 @@ class UserService {
 
   // Проверка является ли пользователь администратором
   async isAdmin(telegramId) {
-    console.log('🔍 Проверка админских прав для пользователя:', telegramId);
-    console.log('🔍 ADMIN_USER_ID из env:', process.env.ADMIN_USER_ID);
+    console.log('🔐 Проверка админских прав:', telegramId);
     
     try {
       const user = await this.getUserByTelegramId(telegramId);
-      console.log('🔍 Пользователь из БД:', user ? `ID: ${user.telegram_id}, is_admin: ${user.is_admin}` : 'НЕ НАЙДЕН');
       
       if (!user) {
         console.log('❌ Пользователь не найден в БД, проверяем только ADMIN_USER_ID');

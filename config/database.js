@@ -6,9 +6,13 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Проверка подключения
+// Проверка подключения (только при первом запуске)
+let connectionLogged = false;
 pool.on('connect', () => {
-  console.log('✅ Подключение к PostgreSQL установлено');
+  if (!connectionLogged) {
+    console.log('✅ Подключение к PostgreSQL установлено');
+    connectionLogged = true;
+  }
 });
 
 pool.on('error', (err) => {

@@ -65,10 +65,8 @@ class AdminPanelHandler {
   // Проверка прав администратора
   async checkAdminRights(ctx) {
     const userId = ctx.from.id;
-    console.log('🔐 Проверка админских прав для пользователя:', userId);
     
     const isAdmin = await userService.isAdmin(userId);
-    console.log('🔐 Результат проверки isAdmin:', isAdmin);
     
     if (!isAdmin) {
       console.log('❌ Отказ в доступе к админ-панели для пользователя:', userId);
@@ -76,7 +74,6 @@ class AdminPanelHandler {
       return false;
     }
     
-    console.log('✅ Доступ к админ-панели разрешён для пользователя:', userId);
     return true;
   }
 
