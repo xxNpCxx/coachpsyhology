@@ -15,11 +15,15 @@ export class CommentTracker {
   setupHandlers() {
     // Обработчик новых сообщений в группе
     this.bot.on('message', async (ctx) => {
+      console.log(`🔍 [КОММЕНТЫ] Получено сообщение от ${ctx.message?.from?.first_name} (${ctx.message?.from?.id}) в чате ${ctx.message?.chat?.id}`);
       try {
         // Проверяем, что сообщение из нужной группы
         if (ctx.message.chat.id.toString() !== COMMENT_GROUP_ID) {
+          console.log(`🔍 [КОММЕНТЫ] Сообщение не из группы ${COMMENT_GROUP_ID}, пропускаем`);
           return;
         }
+
+        console.log(`🔍 [КОММЕНТЫ] Обрабатываем сообщение из группы ${COMMENT_GROUP_ID}`);
 
         // Проверяем, что это комментарий (не команда бота)
         if (ctx.message.text && !ctx.message.text.startsWith('/')) {
