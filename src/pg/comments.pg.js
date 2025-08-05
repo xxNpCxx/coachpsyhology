@@ -85,16 +85,20 @@ export class CommentsPG {
         this.getUserTestCount(userId)
       ]);
       
-      // Пользователь может пройти тест, если количество комментариев >= количеству пройденных тестов
-      const canTake = commentCount >= testCount;
+      // Пользователь может пройти тест, если количество комментариев >= (количество пройденных тестов + 1)
+      // Первый тест: 0 тестов пройдено → нужно 1+ комментариев
+      // Второй тест: 1 тест пройден → нужно 2+ комментариев
+      // Третий тест: 2 теста пройдено → нужно 3+ комментариев
+      const requiredComments = testCount + 1;
+      const canTake = commentCount >= requiredComments;
       
-      console.log(`📊 [БД] Результат проверки: комментарии=${commentCount}, тесты=${testCount}, можно=${canTake}`);
+      console.log(`📊 [БД] Результат проверки: комментарии=${commentCount}, тесты=${testCount}, нужно=${requiredComments}, можно=${canTake}`);
       
       return {
         canTake,
         commentCount,
         testCount,
-        requiredComments: testCount
+        requiredComments
       };
     } catch (error) {
       console.error('❌ [БД] Ошибка canUserTakeTest:', error);
@@ -104,10 +108,10 @@ export class CommentsPG {
       if (error.code === '42P01' && error.message.includes('comments')) {
         console.log('⚠️ [БД] Таблица comments не существует, возвращаем fallback');
         return {
-          canTake: true,
+          canTake: false, // Первый тест требует 1 комментарий
           commentCount: 0,
           testCount: 0,
-          requiredComments: 0
+          requiredComments: 1
         };
       }
       
@@ -189,5 +193,5 @@ export class CommentsPG {
   }
 }
 
-// Экспорт singleton instance
-export const commentsPG = new CommentsPG(); 
+// Создаем экземпляр для экспорта
+export const commentsPG = new CommentsPG();
