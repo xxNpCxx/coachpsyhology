@@ -13,6 +13,7 @@ import { commentScene } from "./scenes/comment.scene.js";
 
 // 4. Импорты обработчиков
 import { registerGlobalHandlers } from "./handlers/globalHandlers.js";
+import { CommentTracker } from "./handlers/commentTracker.js";
 
 // 5. Импорты утилит
 import { cache } from "./utils/cache.js";
@@ -58,6 +59,9 @@ function getUserState(userId) {
 
 // Инициализация админ-панели
 new AdminPanelHandler(bot, getUserState);
+
+// Инициализация отслеживания комментариев
+new CommentTracker(bot);
 
 // Регистрация команд
 registerStartCommand(bot);

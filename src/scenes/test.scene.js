@@ -1,6 +1,8 @@
 import { Scenes } from "telegraf";
 import { cache } from '../utils/cache.js';
 import { testsPG } from '../pg/tests.pg.js';
+import { commentsPG } from '../pg/comments.pg.js';
+import { COMMENT_GROUP_ID } from '../config.js';
 import fs from 'fs';
 
 /**
@@ -46,6 +48,27 @@ try {
 // Вход в сцену
 testScene.enter(async (ctx) => {
   const userId = ctx.from.id;
+  
+  // Проверяем доступ пользователя к тесту
+  try {
+    const accessCheck = await commentsPG.canUserTakeTest(userId, COMMENT_GROUP_ID);
+    
+    if (!accessCheck.canTake) {
+      const message = `❌ *Доступ к тесту ограничен*\n\n` +
+        `📊 Ваша статистика:\n` +
+        `• Пройдено тестов: ${accessCheck.testCount}\n` +
+        `• Оставлено комментариев: ${accessCheck.commentCount}\n` +
+        `• Требуется комментариев: ${accessCheck.requiredComments}\n\n` +
+        `💬 Для прохождения теста необходимо оставить не менее ${accessCheck.requiredComments} комментариев в группе.\n\n` +
+        `🔗 Присоединяйтесь к нашей группе и активно участвуйте в обсуждениях!`;
+      
+      await ctx.reply(message, { parse_mode: 'Markdown' });
+      return ctx.scene.leave();
+    }
+  } catch (error) {
+    console.error('❌ Ошибка проверки доступа к тесту:', error);
+    // В случае ошибки разрешаем прохождение теста
+  }
   
   // Инициализируем состояние пользователя
   const userState = {

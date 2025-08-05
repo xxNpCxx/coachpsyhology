@@ -1,6 +1,7 @@
 import { testsPG } from '../pg/tests.pg.js';
+import { commentsPG } from '../pg/comments.pg.js';
+import { COMMENT_GROUP_ID } from '../config.js';
 import { cache } from '../utils/cache.js';
-import { hasApprovedComment } from '../pg/comments.pg.js';
 
 
 
@@ -29,34 +30,32 @@ export function registerGlobalHandlers(bot) {
       return;
     }
     
-    // Проверяем, есть ли у пользователя результаты тестов
+    // Проверяем доступ пользователя к тесту
     try {
-      const results = await testsPG.getLatestTestResults(userId);
+      const accessCheck = await commentsPG.canUserTakeTest(userId, COMMENT_GROUP_ID);
       
-      if (results.length > 0) {
-        // Пользователь уже проходил тест, проверяем комментарий
-        const hasComment = await hasApprovedComment(userId);
+      if (!accessCheck.canTake) {
+        const message = `❌ *Доступ к тесту ограничен*\n\n` +
+          `📊 Ваша статистика:\n` +
+          `• Пройдено тестов: ${accessCheck.testCount}\n` +
+          `• Оставлено комментариев: ${accessCheck.commentCount}\n` +
+          `• Требуется комментариев: ${accessCheck.requiredComments}\n\n` +
+          `💬 Для прохождения теста необходимо оставить не менее ${accessCheck.requiredComments} комментариев в группе.\n\n` +
+          `🔗 Присоединяйтесь к нашей группе и активно участвуйте в обсуждениях!`;
         
-        if (!hasComment) {
-          await ctx.reply(
-            '📝 *Для повторного прохождения теста*\n\n' +
-            'Вы уже проходили тест. Чтобы пройти его снова, пожалуйста, оставьте комментарий о вашем опыте.\n\n' +
-            'Это поможет нам улучшить тест и сделать его более полезным для других пользователей.',
-            {
-              parse_mode: 'Markdown',
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: '📝 Оставить комментарий', callback_data: 'leave_comment' }],
-                  [{ text: '❌ Отмена', callback_data: 'cancel_comment' }]
-                ]
-              }
-            }
-          );
-          return;
-        }
+        await ctx.reply(message, { 
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📊 Проверить статус комментариев', callback_data: 'check_comments' }],
+              [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
+            ]
+          }
+        });
+        return;
       }
     } catch (error) {
-      console.error('❌ Ошибка проверки результатов:', error);
+      console.error('❌ Ошибка проверки доступа к тесту:', error);
       // В случае ошибки позволяем пройти тест
     }
     
@@ -120,19 +119,20 @@ export function registerGlobalHandlers(bot) {
 
       message += `\n📅 Дата прохождения: ${new Date(results[0].created_at).toLocaleDateString('ru-RU')}`;
 
-      // Проверяем, есть ли одобренный комментарий для повторного прохождения
-      let hasComment = false;
+      // Проверяем доступ к повторному прохождению теста
+      let canRetake = false;
       try {
-        hasComment = await hasApprovedComment(userId);
+        const accessCheck = await commentsPG.canUserTakeTest(userId, COMMENT_GROUP_ID);
+        canRetake = accessCheck.canTake;
       } catch (error) {
-        console.error('❌ Ошибка проверки комментария:', error);
+        console.error('❌ Ошибка проверки доступа к повторному прохождению:', error);
       }
 
       const keyboard = [];
-      if (hasComment) {
+      if (canRetake) {
         keyboard.push([{ text: '🔄 Пройти тест заново', callback_data: 'start_test' }]);
       } else {
-        keyboard.push([{ text: '📝 Оставить комментарий для повторного прохождения', callback_data: 'leave_comment' }]);
+        keyboard.push([{ text: '📊 Проверить статус комментариев', callback_data: 'check_comments' }]);
       }
 
       await ctx.reply(message, {
@@ -175,6 +175,70 @@ export function registerGlobalHandlers(bot) {
   bot.action('cancel_comment', async (ctx) => {
     await ctx.answerCbQuery();
     await ctx.reply('❌ Повторное прохождение теста отменено.', {
+      reply_markup: {
+        keyboard: [
+          ['🎯 Начать тест'],
+          ['ℹ️ О тесте', '📊 Мои результаты']
+        ],
+        resize_keyboard: true
+      }
+    });
+  });
+
+  // Обработка проверки статуса комментариев
+  bot.action('check_comments', async (ctx) => {
+    await ctx.answerCbQuery();
+    const userId = ctx.from.id;
+    
+    try {
+      const accessCheck = await commentsPG.canUserTakeTest(userId, COMMENT_GROUP_ID);
+      const commentInfo = await commentsPG.getUserRecentComments(userId, COMMENT_GROUP_ID, 3);
+      
+      let message = `📊 *Статус ваших комментариев*\n\n`;
+      message += `• Пройдено тестов: ${accessCheck.testCount}\n`;
+      message += `• Оставлено комментариев: ${accessCheck.commentCount}\n`;
+      message += `• Требуется комментариев: ${accessCheck.requiredComments}\n\n`;
+      
+      if (accessCheck.canTake) {
+        message += `✅ *Вы можете пройти тест!*\n\n`;
+      } else {
+        message += `❌ *Недостаточно комментариев*\n\n`;
+        message += `💬 Оставьте еще ${accessCheck.requiredComments - accessCheck.commentCount} комментариев в группе.\n\n`;
+      }
+      
+      if (commentInfo.length > 0) {
+        message += `📝 *Последние комментарии:*\n`;
+        commentInfo.forEach((comment, index) => {
+          const date = new Date(comment.created_at).toLocaleDateString('ru-RU');
+          const preview = comment.text.length > 50 ? comment.text.substring(0, 50) + '...' : comment.text;
+          message += `${index + 1}. ${date}: ${preview}\n`;
+        });
+      }
+      
+      const keyboard = [];
+      if (accessCheck.canTake) {
+        keyboard.push([{ text: '🎯 Начать тест', callback_data: 'start_test' }]);
+      }
+      keyboard.push([{ text: '🏠 Главное меню', callback_data: 'main_menu' }]);
+      
+      await ctx.reply(message, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: keyboard
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Ошибка проверки статуса комментариев:', error);
+      await ctx.reply('❌ Ошибка получения статуса комментариев. Попробуйте позже.');
+    }
+  });
+
+  // Обработка главного меню
+  bot.action('main_menu', async (ctx) => {
+    await ctx.answerCbQuery();
+    await ctx.reply('🏠 *Главное меню*', {
+      parse_mode: 'Markdown',
       reply_markup: {
         keyboard: [
           ['🎯 Начать тест'],
