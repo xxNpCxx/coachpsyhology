@@ -3,7 +3,8 @@
 
 import { usersPG } from '../../pg/users.pg.js';
 import { testsPG } from '../../pg/tests.pg.js';
-import { getPendingComments, approveComment, rejectComment } from '../../pg/comments.pg.js';
+import { commentsPG } from '../../pg/comments.pg.js';
+import { COMMENT_GROUP_ID } from '../../config.js';
 
 class AdminPanelHandler {
   constructor(bot, getUserState) {
@@ -21,8 +22,6 @@ class AdminPanelHandler {
     
     // Обработчики комментариев
     this.bot.action('admin_comments', this.handleCommentsList.bind(this));
-    this.bot.action(/approve_comment_(\d+)/, this.handleApproveComment.bind(this));
-    this.bot.action(/reject_comment_(\d+)/, this.handleRejectComment.bind(this));
     this.bot.action('admin_back', this.handleAdminCommand.bind(this));
   }
 
@@ -118,39 +117,35 @@ class AdminPanelHandler {
     }
 
     try {
-      console.log('🔍 [АДМИН] Загружаем список комментариев...');
-      const comments = await getPendingComments();
-      console.log(`📊 [АДМИН] Найдено комментариев: ${comments.length}`);
+      console.log('🔍 [АДМИН] Загружаем статистику комментариев...');
+      const stats = await commentsPG.getCommentStats(COMMENT_GROUP_ID);
+      console.log(`📊 [АДМИН] Статистика комментариев:`, stats);
       
-      let message = `📝 *Модерация комментариев*\n\n`;
+      let message = `📝 *Статистика комментариев*\n\n`;
       
-      if (comments.length === 0) {
-        message += 'Нет комментариев для модерации.';
+      if (!stats.total_comments) {
+        message += 'Комментарии не найдены.';
       } else {
-        for (let i = 0; i < Math.min(comments.length, 5); i++) {
-          const comment = comments[i];
-          const userName = comment.first_name || comment.username || `User${comment.user_id}`;
-          const commentPreview = comment.comment_text.length > 100 
-            ? comment.comment_text.substring(0, 100) + '...' 
-            : comment.comment_text;
-          
-          message += `${i + 1}. *${userName}*\n`;
-          message += `   ID: \`${comment.user_id}\`\n`;
-          message += `   📅 ${new Date(comment.created_at).toLocaleDateString('ru-RU')}\n`;
-          message += `   💬 ${commentPreview}\n\n`;
+        message += `📊 *Общая статистика:*\n`;
+        message += `• Всего комментариев: ${stats.total_comments}\n`;
+        message += `• Уникальных пользователей: ${stats.unique_users}\n`;
+        message += `• Первый комментарий: ${stats.first_comment ? new Date(stats.first_comment).toLocaleDateString('ru-RU') : 'Н/Д'}\n`;
+        message += `• Последний комментарий: ${stats.last_comment ? new Date(stats.last_comment).toLocaleDateString('ru-RU') : 'Н/Д'}\n\n`;
+        
+        // Получаем топ активных пользователей
+        const topUsers = await commentsPG.getTopActiveUsers(COMMENT_GROUP_ID, 5);
+        if (topUsers.length > 0) {
+          message += `🏆 *Топ активных пользователей:*\n`;
+          topUsers.forEach((user, index) => {
+            const emoji = ['🥇', '🥈', '🥉', '🏅', '🎖️'][index] || `${index + 1}.`;
+            message += `${emoji} ID: \`${user.user_id}\` - ${user.comment_count} комментариев\n`;
+          });
         }
       }
       
-      const keyboard = [];
-      if (comments.length > 0) {
-        comments.slice(0, 5).forEach((comment, index) => {
-          keyboard.push([
-            { text: `✅ Одобрить ${index + 1}`, callback_data: `approve_comment_${comment.id}` },
-            { text: `❌ Отклонить ${index + 1}`, callback_data: `reject_comment_${comment.id}` }
-          ]);
-        });
-      }
-      keyboard.push([{ text: '🔙 Назад', callback_data: 'admin_back' }]);
+      const keyboard = [
+        [{ text: '🔙 Назад', callback_data: 'admin_back' }]
+      ];
       
       await ctx.editMessageText(message, {
         parse_mode: 'Markdown',
@@ -160,80 +155,12 @@ class AdminPanelHandler {
       });
       
     } catch (error) {
-      console.error('❌ Ошибка загрузки комментариев:', error);
+      console.error('❌ Ошибка загрузки статистики комментариев:', error);
       await ctx.answerCbQuery('❌ Ошибка загрузки данных');
     }
   }
 
-  async handleApproveComment(ctx) {
-    const isAdmin = await usersPG.isAdmin(ctx.from.id);
-    
-    if (!isAdmin) {
-      await ctx.answerCbQuery('❌ Нет прав доступа');
-      return;
-    }
 
-    const commentId = parseInt(ctx.match[1]);
-    
-    try {
-      const comment = await approveComment(commentId, ctx.from.id);
-      console.log(`✅ [АДМИН] Комментарий ${commentId} одобрен`);
-      
-      await ctx.answerCbQuery('✅ Комментарий одобрен');
-      
-      // Уведомляем пользователя об одобрении
-      try {
-        await this.bot.telegram.sendMessage(comment.user_id, 
-          '✅ *Ваш комментарий одобрен!*\n\nТеперь вы можете пройти тест повторно.',
-          { parse_mode: 'Markdown' }
-        );
-      } catch (error) {
-        console.error('❌ Ошибка уведомления пользователя:', error);
-      }
-      
-      // Обновляем список комментариев
-      await this.handleCommentsList(ctx);
-      
-    } catch (error) {
-      console.error('❌ Ошибка одобрения комментария:', error);
-      await ctx.answerCbQuery('❌ Ошибка одобрения');
-    }
-  }
-
-  async handleRejectComment(ctx) {
-    const isAdmin = await usersPG.isAdmin(ctx.from.id);
-    
-    if (!isAdmin) {
-      await ctx.answerCbQuery('❌ Нет прав доступа');
-      return;
-    }
-
-    const commentId = parseInt(ctx.match[1]);
-    
-    try {
-      const comment = await rejectComment(commentId, ctx.from.id);
-      console.log(`❌ [АДМИН] Комментарий ${commentId} отклонен`);
-      
-      await ctx.answerCbQuery('❌ Комментарий отклонен');
-      
-      // Уведомляем пользователя об отклонении
-      try {
-        await this.bot.telegram.sendMessage(comment.user_id, 
-          '❌ *Ваш комментарий отклонен.*\n\nПожалуйста, оставьте более подробный и конструктивный отзыв.',
-          { parse_mode: 'Markdown' }
-        );
-      } catch (error) {
-        console.error('❌ Ошибка уведомления пользователя:', error);
-      }
-      
-      // Обновляем список комментариев
-      await this.handleCommentsList(ctx);
-      
-    } catch (error) {
-      console.error('❌ Ошибка отклонения комментария:', error);
-      await ctx.answerCbQuery('❌ Ошибка отклонения');
-    }
-  }
 }
 
 export { AdminPanelHandler };

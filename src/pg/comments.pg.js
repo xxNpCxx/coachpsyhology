@@ -144,6 +144,27 @@ export class CommentsPG {
       throw error;
     }
   }
+
+  // Получение топ активных пользователей
+  async getTopActiveUsers(chatId, limit = 10) {
+    try {
+      const result = await pool.query(`
+        SELECT 
+          user_id,
+          COUNT(*) as comment_count
+        FROM comments 
+        WHERE chat_id = $1::bigint
+        GROUP BY user_id 
+        ORDER BY comment_count DESC 
+        LIMIT $2
+      `, [chatId, limit]);
+      
+      return result.rows;
+    } catch (error) {
+      console.error('❌ Ошибка getTopActiveUsers:', error);
+      throw error;
+    }
+  }
 }
 
 // Экспорт singleton instance
