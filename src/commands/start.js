@@ -36,8 +36,7 @@ async function handleStart(ctx) {
       parse_mode: 'Markdown',
       reply_markup: {
         keyboard: [
-          ['🎯 Начать тест'],
-          ['ℹ️ О тесте']
+          ['🎯 Начать тест']
         ],
         resize_keyboard: true
       }

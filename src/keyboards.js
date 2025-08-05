@@ -6,10 +6,9 @@
 // Главное меню
 export function mainMenuKeyboard() {
   return {
-    keyboard: [
-      ['🎯 Начать тест'],
-      ['ℹ️ О тесте']
-    ],
+          keyboard: [
+        ['🎯 Начать тест']
+      ],
     resize_keyboard: true
   };
 }
