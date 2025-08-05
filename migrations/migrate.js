@@ -96,7 +96,9 @@ async function runMigrationsAndExit() {
   }
 }
 
-// Запуск миграций
-runMigrationsAndExit();
+// Запуск миграций только если файл запущен напрямую
+if (import.meta.url === `file://${process.argv[1]}`) {
+  runMigrationsAndExit();
+}
 
 export { runMigrations }; 
