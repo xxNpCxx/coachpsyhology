@@ -9,6 +9,7 @@ import { registerStartCommand } from "./commands/start.js";
 
 // 3. Импорты сцен
 import { testScene } from "./scenes/test.scene.js";
+import { commentScene } from "./scenes/comment.scene.js";
 
 // 4. Импорты обработчиков
 import { registerGlobalHandlers } from "./handlers/globalHandlers.js";
@@ -45,7 +46,7 @@ bot.use(async (ctx, next) => {
 });
 
 // FSM Stage middleware для сцен
-const stage = new Scenes.Stage([testScene]);
+const stage = new Scenes.Stage([testScene, commentScene]);
 bot.use(stage.middleware());
 
 // 9. Регистрация компонентов

@@ -1,25 +1,8 @@
 import { testsPG } from '../pg/tests.pg.js';
 import { cache } from '../utils/cache.js';
+import { hasApprovedComment } from '../pg/comments.pg.js';
 
-// Функция для получения имени PDF файла по названию архетипа
-function getPdfFileName(archetypeName) {
-  const pdfMap = {
-    'Воин': 'воин.pdf',
-    'Маг': 'маг.pdf',
-    'Дитя': 'дитя.pdf',
-    'Искатель': 'искатель.pdf',
-    'Бунтарь': 'бунтарь.pdf',
-    'Любовник': 'любовник.pdf',
-    'Творец': 'творец.pdf',
-    'Шут': 'шут.pdf',
-    'Мудрец': 'мудрец.pdf',
-    'Правитель': 'правитель.pdf',
-    'Славный малый': 'славный%20малый.pdf',
-    'Опекун': 'опекун.pdf'
-  };
-  
-  return pdfMap[archetypeName] || 'искатель.pdf'; // fallback
-}
+
 
 /**
  * Глобальные обработчики для основных команд и кнопок
@@ -44,6 +27,37 @@ export function registerGlobalHandlers(bot) {
         }
       });
       return;
+    }
+    
+    // Проверяем, есть ли у пользователя результаты тестов
+    try {
+      const results = await testsPG.getLatestTestResults(userId);
+      
+      if (results.length > 0) {
+        // Пользователь уже проходил тест, проверяем комментарий
+        const hasComment = await hasApprovedComment(userId);
+        
+        if (!hasComment) {
+          await ctx.reply(
+            '📝 *Для повторного прохождения теста*\n\n' +
+            'Вы уже проходили тест. Чтобы пройти его снова, пожалуйста, оставьте комментарий о вашем опыте.\n\n' +
+            'Это поможет нам улучшить тест и сделать его более полезным для других пользователей.',
+            {
+              parse_mode: 'Markdown',
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '📝 Оставить комментарий', callback_data: 'leave_comment' }],
+                  [{ text: '❌ Отмена', callback_data: 'cancel_comment' }]
+                ]
+              }
+            }
+          );
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('❌ Ошибка проверки результатов:', error);
+      // В случае ошибки позволяем пройти тест
     }
     
     await ctx.scene.enter('test');
@@ -101,18 +115,30 @@ export function registerGlobalHandlers(bot) {
       
       results.forEach((result, index) => {
         const emoji = ['🥇', '🥈', '🥉', '🏅'][index] || `${index + 1}.`;
-        const pdfFileName = getPdfFileName(result.archetype_name);
-        message += `${emoji} [**${result.archetype_name}**](https://coachpsyhology.onrender.com/answers/${pdfFileName}): ${result.percentage}%\n`;
+        message += `${emoji} **${result.archetype_name}**: ${result.percentage}%\n`;
       });
 
       message += `\n📅 Дата прохождения: ${new Date(results[0].created_at).toLocaleDateString('ru-RU')}`;
 
+      // Проверяем, есть ли одобренный комментарий для повторного прохождения
+      let hasComment = false;
+      try {
+        hasComment = await hasApprovedComment(userId);
+      } catch (error) {
+        console.error('❌ Ошибка проверки комментария:', error);
+      }
+
+      const keyboard = [];
+      if (hasComment) {
+        keyboard.push([{ text: '🔄 Пройти тест заново', callback_data: 'start_test' }]);
+      } else {
+        keyboard.push([{ text: '📝 Оставить комментарий для повторного прохождения', callback_data: 'leave_comment' }]);
+      }
+
       await ctx.reply(message, {
         parse_mode: 'Markdown',
         reply_markup: {
-          inline_keyboard: [
-            [{ text: '🔄 Пройти тест заново', callback_data: 'start_test' }]
-          ]
+          inline_keyboard: keyboard
         }
       });
 
@@ -138,6 +164,25 @@ export function registerGlobalHandlers(bot) {
     await ctx.answerCbQuery();
     await ctx.reply('▶️ Продолжаем тест...');
     // Логика для продолжения теста реализуется в сцене
+  });
+
+  // Обработка комментариев
+  bot.action('leave_comment', async (ctx) => {
+    await ctx.answerCbQuery();
+    await ctx.scene.enter('comment');
+  });
+
+  bot.action('cancel_comment', async (ctx) => {
+    await ctx.answerCbQuery();
+    await ctx.reply('❌ Повторное прохождение теста отменено.', {
+      reply_markup: {
+        keyboard: [
+          ['🎯 Начать тест'],
+          ['ℹ️ О тесте', '📊 Мои результаты']
+        ],
+        resize_keyboard: true
+      }
+    });
   });
 
   // Обработка главного меню
