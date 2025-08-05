@@ -23,10 +23,10 @@ try {
     questionNumbers.forEach(questionNum => {
       questions.push({
         questionNumber: parseInt(questionNum),
-        answer1: "Полностью согласен",
-        answer2: "Скорее согласен", 
-        answer3: "Скорее не согласен",
-        answer4: "Полностью не согласен",
+        answer1: "Полностью согласен(на)",
+        answer2: "Скорее да, чем нет", 
+        answer3: "Не знаю",
+        answer4: "Это совсем не про меня",
         archetype: archetype
       });
     });
