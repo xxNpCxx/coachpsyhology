@@ -46,6 +46,9 @@ bot.use(async (ctx, next) => {
   await next();
 });
 
+// Middleware для отслеживания комментариев в группе
+new CommentTracker(bot);
+
 // FSM Stage middleware для сцен
 const stage = new Scenes.Stage([testScene, commentScene]);
 bot.use(stage.middleware());
@@ -59,9 +62,6 @@ function getUserState(userId) {
 
 // Инициализация админ-панели
 new AdminPanelHandler(bot, getUserState);
-
-// Инициализация отслеживания комментариев
-new CommentTracker(bot);
 
 // Регистрация команд
 registerStartCommand(bot);

@@ -9,32 +9,31 @@ import { COMMENT_GROUP_ID } from '../config.js';
 export class CommentTracker {
   constructor(bot) {
     this.bot = bot;
-    this.setupHandlers();
+    this.setupMiddleware();
   }
 
-  setupHandlers() {
-    // Обработчик новых сообщений в группе
-    this.bot.on('message', async (ctx) => {
-      console.log(`🔍 [КОММЕНТЫ] Получено сообщение от ${ctx.message?.from?.first_name} (${ctx.message?.from?.id}) в чате ${ctx.message?.chat?.id}`);
+  setupMiddleware() {
+    // Middleware для отслеживания комментариев в группе
+    this.bot.use(async (ctx, next) => {
       try {
-        // Проверяем, что сообщение из нужной группы
-        if (ctx.message.chat.id.toString() !== COMMENT_GROUP_ID) {
-          console.log(`🔍 [КОММЕНТЫ] Сообщение не из группы ${COMMENT_GROUP_ID}, пропускаем`);
-          return;
-        }
-
-        console.log(`🔍 [КОММЕНТЫ] Обрабатываем сообщение из группы ${COMMENT_GROUP_ID}`);
-
-        // Проверяем, что это комментарий (не команда бота)
-        if (ctx.message.text && !ctx.message.text.startsWith('/')) {
-          await this.handleNewComment(ctx);
+        // Проверяем, что это сообщение и оно из нужной группы
+        if (ctx.message && ctx.message.chat.id.toString() === COMMENT_GROUP_ID) {
+          console.log(`🔍 [КОММЕНТЫ] Обрабатываем сообщение из группы ${COMMENT_GROUP_ID}`);
+          
+          // Проверяем, что это комментарий (не команда бота)
+          if (ctx.message.text && !ctx.message.text.startsWith('/')) {
+            await this.handleNewComment(ctx);
+          }
         }
       } catch (error) {
         console.error('❌ Ошибка обработки сообщения в группе:', error);
       }
+      
+      // ВАЖНО: всегда вызываем next() для передачи управления другим обработчикам
+      await next();
     });
 
-    // Обработчик редактирования сообщений
+    // Обработчик редактирования сообщений (отдельно, так как это не middleware)
     this.bot.on('edited_message', async (ctx) => {
       try {
         if (ctx.editedMessage.chat.id.toString() !== COMMENT_GROUP_ID) {
