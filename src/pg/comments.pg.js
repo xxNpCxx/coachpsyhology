@@ -42,6 +42,13 @@ export class CommentsPG {
     } catch (error) {
       console.error('❌ [БД] Ошибка getUserCommentCount:', error);
       console.error('❌ [БД] Stack trace:', error.stack);
+      
+      // Если таблица не существует, возвращаем 0
+      if (error.code === '42P01' && error.message.includes('comments')) {
+        console.log('⚠️ [БД] Таблица comments не существует, возвращаем 0 комментариев');
+        return 0;
+      }
+      
       throw error;
     }
   }
@@ -92,6 +99,18 @@ export class CommentsPG {
     } catch (error) {
       console.error('❌ [БД] Ошибка canUserTakeTest:', error);
       console.error('❌ [БД] Stack trace:', error.stack);
+      
+      // Если таблица не существует, возвращаем fallback результат
+      if (error.code === '42P01' && error.message.includes('comments')) {
+        console.log('⚠️ [БД] Таблица comments не существует, возвращаем fallback');
+        return {
+          canTake: true,
+          commentCount: 0,
+          testCount: 0,
+          requiredComments: 0
+        };
+      }
+      
       throw error;
     }
   }

@@ -110,6 +110,17 @@ async function startBot() {
     await pool.query('SELECT 1');
     console.log('✅ База данных доступна');
     
+    // Запускаем миграции
+    console.log('🔄 Запуск миграций...');
+    try {
+      const { runMigrations } = await import('../migrations/migrate.js');
+      await runMigrations();
+      console.log('✅ Миграции выполнены успешно');
+    } catch (migrationError) {
+      console.error('❌ Ошибка выполнения миграций:', migrationError);
+      // Продолжаем работу даже если миграции не выполнились
+    }
+    
     if (process.env.NODE_ENV === 'production') {
       // Production: webhook mode
       if (WEBHOOK_URL) {
