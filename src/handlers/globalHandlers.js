@@ -1,4 +1,3 @@
-import { testsPG } from '../pg/tests.pg.js';
 import { commentsPG } from '../pg/comments.pg.js';
 import { COMMENT_GROUP_ID, COMMENT_GROUP_LINK } from '../config.js';
 import { cache } from '../utils/cache.js';
@@ -94,61 +93,7 @@ export function registerGlobalHandlers(bot) {
     await ctx.reply(aboutMessage, { parse_mode: 'Markdown' });
   });
 
-  // Обработка кнопки "Мои результаты"
-  bot.hears(['📊 Мои результаты', 'Мои результаты'], async (ctx) => {
-    const userId = ctx.from.id;
-    
-    try {
-      const results = await testsPG.getLatestTestResults(userId);
-      
-      if (results.length === 0) {
-        await ctx.reply('❌ У вас пока нет результатов тестов. Пройдите тест, чтобы узнать свои архетипы!', {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '🎯 Начать тест', callback_data: 'start_test' }]
-            ]
-          }
-        });
-        return;
-      }
 
-      let message = `📊 *Ваши последние результаты:*\n\n`;
-      
-      results.forEach((result, index) => {
-        const emoji = ['🥇', '🥈', '🥉', '🏅'][index] || `${index + 1}.`;
-        message += `${emoji} **${result.archetype_name}**: ${result.percentage}%\n`;
-      });
-
-      message += `\n📅 Дата прохождения: ${new Date(results[0].created_at).toLocaleDateString('ru-RU')}`;
-
-      // Проверяем доступ к повторному прохождению теста
-      let canRetake = false;
-      try {
-        const accessCheck = await commentsPG.canUserTakeTest(userId, COMMENT_GROUP_ID);
-        canRetake = accessCheck.canTake;
-      } catch (error) {
-        console.error('❌ Ошибка проверки доступа к повторному прохождению:', error);
-      }
-
-      const keyboard = [];
-      if (canRetake) {
-        keyboard.push([{ text: '🔄 Пройти тест заново', callback_data: 'start_test' }]);
-      } else {
-        keyboard.push([{ text: '📊 Проверить статус комментариев', callback_data: 'check_comments' }]);
-      }
-
-      await ctx.reply(message, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: keyboard
-        }
-      });
-
-    } catch (error) {
-      console.error('❌ Ошибка получения результатов:', error);
-      await ctx.reply('❌ Ошибка получения результатов. Попробуйте позже.');
-    }
-  });
 
   // Обработка callback queries
   bot.action('start_test', async (ctx) => {
@@ -180,7 +125,7 @@ export function registerGlobalHandlers(bot) {
       reply_markup: {
         keyboard: [
           ['🎯 Начать тест'],
-          ['ℹ️ О тесте', '📊 Мои результаты']
+          ['ℹ️ О тесте']
         ],
         resize_keyboard: true
       }
@@ -244,7 +189,7 @@ export function registerGlobalHandlers(bot) {
       reply_markup: {
         keyboard: [
           ['🎯 Начать тест'],
-          ['ℹ️ О тесте', '📊 Мои результаты']
+          ['ℹ️ О тесте']
         ],
         resize_keyboard: true
       }
@@ -283,7 +228,7 @@ export function registerGlobalHandlers(bot) {
       reply_markup: {
         keyboard: [
           ['🎯 Начать тест'],
-          ['ℹ️ О тесте', '📊 Мои результаты']
+          ['ℹ️ О тесте']
         ],
         resize_keyboard: true
       }

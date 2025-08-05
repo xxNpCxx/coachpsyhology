@@ -8,7 +8,7 @@ export function mainMenuKeyboard() {
   return {
     keyboard: [
       ['🎯 Начать тест'],
-      ['ℹ️ О тесте', '📊 Мои результаты']
+      ['ℹ️ О тесте']
     ],
     resize_keyboard: true
   };

@@ -281,7 +281,7 @@ async function showResults(ctx, userId) {
     reply_markup: {
       keyboard: [
         ['🎯 Начать тест'],
-        ['ℹ️ О тесте', '📊 Мои результаты']
+        ['ℹ️ О тесте']
       ],
       resize_keyboard: true
     }
