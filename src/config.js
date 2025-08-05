@@ -9,6 +9,7 @@ export const BOT_TOKEN = process.env.BOT_TOKEN;
 export const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 export const WEBHOOK_URL = process.env.WEBHOOK_URL;
 export const COMMENT_GROUP_ID = process.env.COMMENT_GROUP_ID;
+export const COMMENT_GROUP_LINK = process.env.COMMENT_GROUP_LINK;
 export const REQUIRED_CHANNEL_ID = process.env.REQUIRED_CHANNEL_ID;
 export const REQUIRED_CHANNEL_LINK = process.env.REQUIRED_CHANNEL_LINK;
 
@@ -36,6 +37,7 @@ export default {
   ADMIN_USER_ID,
   WEBHOOK_URL,
   COMMENT_GROUP_ID,
+  COMMENT_GROUP_LINK,
   REQUIRED_CHANNEL_ID,
   REQUIRED_CHANNEL_LINK,
   pool
