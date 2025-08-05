@@ -12,7 +12,9 @@ import { cache } from '../utils/cache.js';
 export function registerGlobalHandlers(bot) {
   // Обработка кнопки "Начать тест"
   bot.hears(['🎯 Начать тест', 'Начать тест'], async (ctx) => {
+    console.log('🔍 [ТЕСТ] Обработчик "Начать тест" вызван');
     const userId = ctx.from.id;
+    console.log(`🔍 [ТЕСТ] Пользователь ID: ${userId}`);
     
     // Проверяем, не находится ли пользователь уже в тесте
     const userState = cache.getUserState(userId);

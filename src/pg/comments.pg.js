@@ -27,7 +27,7 @@ export class CommentsPG {
   // Получение количества комментариев пользователя в группе
   async getUserCommentCount(userId, chatId) {
     try {
-      console.log(`🔍 Подсчитываем комментарии пользователя ${userId} в чате ${chatId}`);
+      console.log(`🔍 [БД] Подсчитываем комментарии пользователя ${userId} в чате ${chatId}`);
       
       const result = await pool.query(`
         SELECT COUNT(*) as comment_count
@@ -36,11 +36,12 @@ export class CommentsPG {
       `, [userId, chatId]);
       
       const count = parseInt(result.rows[0]?.comment_count || 0);
-      console.log(`📊 Количество комментариев: ${count}`);
+      console.log(`📊 [БД] Количество комментариев: ${count}`);
       
       return count;
     } catch (error) {
-      console.error('❌ Ошибка getUserCommentCount:', error);
+      console.error('❌ [БД] Ошибка getUserCommentCount:', error);
+      console.error('❌ [БД] Stack trace:', error.stack);
       throw error;
     }
   }
@@ -48,7 +49,7 @@ export class CommentsPG {
   // Получение количества пройденных тестов пользователя
   async getUserTestCount(userId) {
     try {
-      console.log(`🔍 Подсчитываем тесты пользователя ${userId}`);
+      console.log(`🔍 [БД] Подсчитываем тесты пользователя ${userId}`);
       
       const result = await pool.query(`
         SELECT COUNT(DISTINCT DATE(created_at)) as test_count
@@ -57,11 +58,12 @@ export class CommentsPG {
       `, [userId]);
       
       const count = parseInt(result.rows[0]?.test_count || 0);
-      console.log(`📊 Количество тестов: ${count}`);
+      console.log(`📊 [БД] Количество тестов: ${count}`);
       
       return count;
     } catch (error) {
-      console.error('❌ Ошибка getUserTestCount:', error);
+      console.error('❌ [БД] Ошибка getUserTestCount:', error);
+      console.error('❌ [БД] Stack trace:', error.stack);
       throw error;
     }
   }
@@ -69,7 +71,7 @@ export class CommentsPG {
   // Проверка возможности прохождения теста
   async canUserTakeTest(userId, chatId) {
     try {
-      console.log(`🔍 Проверяем возможность прохождения теста для пользователя ${userId}`);
+      console.log(`🔍 [БД] Проверяем возможность прохождения теста для пользователя ${userId} в чате ${chatId}`);
       
       const [commentCount, testCount] = await Promise.all([
         this.getUserCommentCount(userId, chatId),
@@ -79,7 +81,7 @@ export class CommentsPG {
       // Пользователь может пройти тест, если количество комментариев >= количеству пройденных тестов
       const canTake = commentCount >= testCount;
       
-      console.log(`📊 Результат проверки: комментарии=${commentCount}, тесты=${testCount}, можно=${canTake}`);
+      console.log(`📊 [БД] Результат проверки: комментарии=${commentCount}, тесты=${testCount}, можно=${canTake}`);
       
       return {
         canTake,
@@ -88,7 +90,8 @@ export class CommentsPG {
         requiredComments: testCount
       };
     } catch (error) {
-      console.error('❌ Ошибка canUserTakeTest:', error);
+      console.error('❌ [БД] Ошибка canUserTakeTest:', error);
+      console.error('❌ [БД] Stack trace:', error.stack);
       throw error;
     }
   }
