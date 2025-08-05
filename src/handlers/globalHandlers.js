@@ -1,6 +1,6 @@
 import { testsPG } from '../pg/tests.pg.js';
 import { commentsPG } from '../pg/comments.pg.js';
-import { COMMENT_GROUP_ID } from '../config.js';
+import { COMMENT_GROUP_ID, COMMENT_GROUP_LINK } from '../config.js';
 import { cache } from '../utils/cache.js';
 
 
@@ -50,7 +50,7 @@ export function registerGlobalHandlers(bot) {
           reply_markup: {
             inline_keyboard: [
               [{ text: '📊 Проверить статус комментариев', callback_data: 'check_comments' }],
-              [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
+              [{ text: '💬 Оставить комментарий', url: COMMENT_GROUP_LINK || 'https://t.me/your_group' }]
             ]
           }
         });
@@ -221,7 +221,7 @@ export function registerGlobalHandlers(bot) {
       if (accessCheck.canTake) {
         keyboard.push([{ text: '🎯 Начать тест', callback_data: 'start_test' }]);
       }
-      keyboard.push([{ text: '🏠 Главное меню', callback_data: 'main_menu' }]);
+      keyboard.push([{ text: '💬 Оставить комментарий', url: COMMENT_GROUP_LINK || 'https://t.me/your_group' }]);
       
       await ctx.reply(message, {
         parse_mode: 'Markdown',
@@ -249,6 +249,26 @@ export function registerGlobalHandlers(bot) {
         resize_keyboard: true
       }
     });
+  });
+
+  // Обработка кнопки "Оставить комментарий"
+  bot.hears(['💬 Оставить комментарий'], async (ctx) => {
+    const groupLink = COMMENT_GROUP_LINK || 'https://t.me/your_group';
+    await ctx.reply(
+      `💬 *Оставить комментарий*\n\n` +
+      `Для оставления комментария перейдите в нашу группу:\n\n` +
+      `🔗 ${groupLink}\n\n` +
+      `После оставления комментария в группе, вернитесь сюда и нажмите "📊 Проверить статус комментариев"`,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🔗 Перейти в группу', url: groupLink }],
+            [{ text: '📊 Проверить статус комментариев', callback_data: 'check_comments' }]
+          ]
+        }
+      }
+    );
   });
 
   // Обработка главного меню

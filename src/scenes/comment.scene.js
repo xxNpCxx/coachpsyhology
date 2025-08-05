@@ -1,6 +1,6 @@
 import { Scenes } from 'telegraf';
 import { commentsPG } from '../pg/comments.pg.js';
-import { COMMENT_GROUP_ID } from '../config.js';
+import { COMMENT_GROUP_ID, COMMENT_GROUP_LINK } from '../config.js';
 
 export const commentScene = new Scenes.BaseScene('comment');
 
@@ -35,7 +35,7 @@ commentScene.enter(async (ctx) => {
       keyboard.push(['🎯 Начать тест']);
     }
     keyboard.push(['📊 Проверить статус комментариев']);
-    keyboard.push(['🏠 Главное меню']);
+    keyboard.push(['💬 Оставить комментарий']);
     
     await ctx.reply(message, {
       parse_mode: 'Markdown',
@@ -59,6 +59,26 @@ commentScene.enter(async (ctx) => {
   }
   
   await ctx.scene.leave();
+});
+
+// Обработка кнопки "Оставить комментарий"
+commentScene.hears(['💬 Оставить комментарий'], async (ctx) => {
+  const groupLink = COMMENT_GROUP_LINK || 'https://t.me/your_group';
+  await ctx.reply(
+    `💬 *Оставить комментарий*\n\n` +
+    `Для оставления комментария перейдите в нашу группу:\n\n` +
+    `🔗 ${groupLink}\n\n` +
+    `После оставления комментария в группе, вернитесь сюда и нажмите "📊 Проверить статус комментариев"`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🔗 Перейти в группу', url: groupLink }],
+          [{ text: '📊 Проверить статус комментариев', callback_data: 'check_comments' }]
+        ]
+      }
+    }
+  );
 });
 
 // Выход из сцены
