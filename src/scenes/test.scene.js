@@ -136,14 +136,10 @@ async function showQuestion(ctx, userId) {
   
   const keyboard = {
     inline_keyboard: [
-      [
-        { text: currentQuestion.answer1, callback_data: 'answer_1' },
-        { text: currentQuestion.answer2, callback_data: 'answer_2' }
-      ],
-      [
-        { text: currentQuestion.answer3, callback_data: 'answer_3' },
-        { text: currentQuestion.answer4, callback_data: 'answer_4' }
-      ]
+      [{ text: currentQuestion.answer1, callback_data: 'answer_1' }],
+      [{ text: currentQuestion.answer2, callback_data: 'answer_2' }],
+      [{ text: currentQuestion.answer3, callback_data: 'answer_3' }],
+      [{ text: currentQuestion.answer4, callback_data: 'answer_4' }]
     ]
   };
   
